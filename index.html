@@ -51,7 +51,17 @@ body{
   display:flex;justify-content:space-between;align-items:flex-start;
   flex-wrap:wrap;gap:16px;
   padding-bottom:20px;border-bottom:1px solid var(--line);
+  position:relative;
 }
+.profile-btn{
+  position:absolute;top:0;right:0;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--grad);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#15161A;
+  transition:opacity .18s ease, transform .12s ease;
+}
+.profile-btn:hover{opacity:.88;transform:translateY(-1px);}
 .title-block .eyebrow{
   font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--accent2);margin-bottom:8px;
@@ -84,6 +94,13 @@ input:focus,select:focus{outline:none;border-color:var(--accent2);}
 #exportBtn:hover{opacity:.88;transform:translateY(-1px);}
 #exportBtn:disabled{opacity:.5;cursor:progress;transform:none;}
 .export-status,.save-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-soft);min-height:14px;}
+#backupBtn,#restoreBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;flex:1;
+}
+#backupBtn:hover,#restoreBtn:hover{border-color:var(--accent2);}
+#restoreBtn.confirming{border-color:var(--danger);color:#fff;background:var(--danger);}
 
 /* ---------- Level badge ---------- */
 .level-badge{
@@ -293,8 +310,8 @@ footer{
 
 /* ---------- Loading ---------- */
 #loadingOverlay{
-  position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;
-  font-family:'JetBrains Mono',monospace;color:var(--text-soft);font-size:13px;z-index:50;
+  position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;color:var(--text-soft);font-size:13px;z-index:50;padding:20px;
 }
 
 /* ---------- Responsive ---------- */
@@ -322,10 +339,27 @@ footer{
 </style>
 </head>
 <body>
-<div id="loadingOverlay">Loading your data…</div>
+<div id="loadingOverlay">
+  <div id="loadingText">Loading your data…</div>
+  <div id="syncGate" style="display:none;flex-direction:column;gap:12px;align-items:center;max-width:340px;text-align:center;">
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;" id="syncGateTitle">Log in</div>
+    <div style="font-size:12px;color:#9B9A93;" id="syncGateHint">Use the same username and password on every device to load the same habit history.</div>
+    <input type="text" id="syncUserInput" placeholder="Username" autocomplete="username" style="font-family:'JetBrains Mono',monospace;font-size:13px;background:#232429;color:#E7E6E1;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;width:100%;">
+    <input type="text" id="syncFriendInput" placeholder="A friend's name (for recovery)" autocomplete="off" style="display:none;font-family:'JetBrains Mono',monospace;font-size:13px;background:#232429;color:#E7E6E1;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;width:100%;">
+    <input type="password" id="syncPassInput" placeholder="Password" autocomplete="current-password" style="font-family:'JetBrains Mono',monospace;font-size:13px;background:#232429;color:#E7E6E1;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;width:100%;">
+    <input type="password" id="syncPassConfirmInput" placeholder="Confirm password" autocomplete="new-password" style="display:none;font-family:'JetBrains Mono',monospace;font-size:13px;background:#232429;color:#E7E6E1;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;width:100%;">
+    <button type="button" id="syncGateBtn" style="font-family:'Sora',sans-serif;font-weight:700;font-size:13px;background:linear-gradient(135deg,#6E8B7A,#7C93AA);color:#15161A;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;width:100%;">Log in</button>
+    <div style="display:flex;justify-content:space-between;width:100%;">
+      <button type="button" id="syncModeToggle" style="background:none;border:none;color:#7C93AA;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;text-decoration:underline;padding:2px;">New here? Create an account</button>
+      <button type="button" id="syncForgotBtn" style="background:none;border:none;color:#A57C82;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;text-decoration:underline;padding:2px;">Forgot password?</button>
+    </div>
+    <div id="syncGateStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9B9A93;min-height:14px;"></div>
+  </div>
+</div>
 <div id="app" style="display:none">
 
   <div class="masthead">
+    <button id="profileLogoutBtn" type="button" class="profile-btn" title="Log out" aria-label="Log out">👤</button>
     <div class="title-block">
       <div class="eyebrow">HabitGame · Console</div>
       <h1>Habit Tracker</h1>
@@ -340,8 +374,17 @@ footer{
         <select id="monthSelect"></select>
         <button id="exportBtn" onclick="exportPDF()">📄 Export PDF</button>
       </div>
+      <div class="controls-row">
+        <button id="syncCodeBtn" type="button">🔄 Switch account</button>
+      </div>
+      <div class="controls-row">
+        <button id="backupBtn" type="button">⬇ Backup data</button>
+        <button id="restoreBtn" type="button">⬆ Restore backup</button>
+        <input type="file" id="restoreFileInput" accept="application/json" style="display:none">
+      </div>
       <div class="export-status" id="exportStatus"></div>
       <div class="save-status" id="saveStatus"></div>
+      <div class="save-status" id="backupStatus"></div>
     </div>
   </div>
 
@@ -367,6 +410,41 @@ footer{
         <div class="habit-grid" id="habitGrid"></div>
       </div>
       <div class="empty-note" id="gridEmptyNote" style="display:none">No habits yet — add one at the bottom of the page.</div>
+    </div>
+  </div>
+
+  <!-- 2b. Overall Wellness (moved right after My Habits) -->
+  <div class="section" id="sec-wellness">
+    <div class="section-head"><h2>Overall Wellness</h2><span class="tag">mood &amp; sleep</span></div>
+    <div class="card">
+      <div class="log-form">
+        <div class="log-field">
+          <label for="logDay">Day</label>
+          <input type="number" id="logDay" min="1" value="1">
+        </div>
+        <div class="log-field">
+          <label>Mood (1–5)</label>
+          <div class="mood-picker" id="moodPicker">
+            <button type="button" class="mood-btn" data-mood="1">1</button>
+            <button type="button" class="mood-btn" data-mood="2">2</button>
+            <button type="button" class="mood-btn" data-mood="3">3</button>
+            <button type="button" class="mood-btn" data-mood="4">4</button>
+            <button type="button" class="mood-btn" data-mood="5">5</button>
+          </div>
+        </div>
+        <div class="log-field">
+          <label for="logSleep">Sleep (hrs)</label>
+          <input type="number" id="logSleep" min="0" max="24" step="0.5" placeholder="7.5">
+        </div>
+        <button type="button" id="todayBtn">Today</button>
+        <button type="button" id="saveLogBtn">Save entry</button>
+      </div>
+      <div class="legend-row">
+        <span><span class="dot" style="background:var(--accent2)"></span>Mood (1–5)</span>
+        <span><span class="dot" style="background:var(--accent4)"></span>Hours of Sleep</span>
+      </div>
+      <canvas id="wellnessChart" height="120"></canvas>
+      <div class="wellness-hint" id="wellnessHint"></div>
     </div>
   </div>
 
@@ -432,41 +510,6 @@ footer{
     </div>
   </div>
 
-  <!-- 9. Overall Wellness -->
-  <div class="section" id="sec-wellness">
-    <div class="section-head"><h2>Overall Wellness</h2><span class="tag">mood &amp; sleep</span></div>
-    <div class="card">
-      <div class="log-form">
-        <div class="log-field">
-          <label for="logDay">Day</label>
-          <input type="number" id="logDay" min="1" value="1">
-        </div>
-        <div class="log-field">
-          <label>Mood (1–5)</label>
-          <div class="mood-picker" id="moodPicker">
-            <button type="button" class="mood-btn" data-mood="1">1</button>
-            <button type="button" class="mood-btn" data-mood="2">2</button>
-            <button type="button" class="mood-btn" data-mood="3">3</button>
-            <button type="button" class="mood-btn" data-mood="4">4</button>
-            <button type="button" class="mood-btn" data-mood="5">5</button>
-          </div>
-        </div>
-        <div class="log-field">
-          <label for="logSleep">Sleep (hrs)</label>
-          <input type="number" id="logSleep" min="0" max="24" step="0.5" placeholder="7.5">
-        </div>
-        <button type="button" id="todayBtn">Today</button>
-        <button type="button" id="saveLogBtn">Save entry</button>
-      </div>
-      <div class="legend-row">
-        <span><span class="dot" style="background:var(--accent2)"></span>Mood (1–5)</span>
-        <span><span class="dot" style="background:var(--accent4)"></span>Hours of Sleep</span>
-      </div>
-      <canvas id="wellnessChart" height="120"></canvas>
-      <div class="wellness-hint" id="wellnessHint"></div>
-    </div>
-  </div>
-
   <!-- 10. Manage Habits (last) -->
   <div class="section" id="sec-manage">
     <div class="section-head"><h2>Manage Habits</h2><span class="tag">add or remove</span></div>
@@ -512,21 +555,67 @@ const DEFAULT_HABITS = [
   {id:'h8', name:"Healthy Meals",      icon:"🥗"},
 ];
 
-/* ============ Storage (persists on this device) ============ */
-const hasStorage = !!(window.storage && typeof window.storage.get === 'function');
+/* ============ Storage: Supabase (cross-device sync) ============ */
+const SUPABASE_URL = 'https://krodsuulmkndyotvfywu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Afo1vk5FJnRX9Bb3_y1beQ_tcEuG_uU';
+const SUPABASE_TABLE = 'habit_tracker_data';
+
+let syncCode = null;
+
+/* Local, device-only cache — used ONLY to remember which sync code this
+   device last used, so the person doesn't retype it every visit. */
+const hasLocalStorage = !!(window.storage && typeof window.storage.get === 'function');
+async function localGet(key){
+  if(!hasLocalStorage) return null;
+  try{ const res = await window.storage.get(key, false); return res ? res.value : null; }catch(e){ return null; }
+}
+async function localSet(key, value){
+  if(!hasLocalStorage) return false;
+  try{ const res = await window.storage.set(key, value, false); return !!res; }catch(e){ return false; }
+}
+
+async function supaFetch(path, options={}){
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers:{
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers||{})
+    }
+  });
+}
+
+/* Every read/write of actual app data (habits, completions, mood, sleep)
+   goes through these three functions, keyed by the person's sync code. */
 async function storageGet(key){
-  if(!hasStorage) return null;
+  if(!syncCode) return null;
   try{
-    const res = await window.storage.get(key, false);
-    return res ? res.value : null;
-  }catch(e){ return null; }
+    const res = await supaFetch(`${SUPABASE_TABLE}?sync_code=eq.${encodeURIComponent(syncCode)}&storage_key=eq.${encodeURIComponent(key)}&select=value`);
+    if(!res.ok) return null;
+    const rows = await res.json();
+    return rows.length ? rows[0].value : null;
+  }catch(e){ console.error(e); return null; }
 }
 async function storageSet(key, value){
-  if(!hasStorage) return false;
+  if(!syncCode) return false;
   try{
-    const res = await window.storage.set(key, value, false);
-    return !!res;
-  }catch(e){ return false; }
+    const res = await supaFetch(SUPABASE_TABLE, {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ sync_code: syncCode, storage_key: key, value, updated_at: new Date().toISOString() }])
+    });
+    return res.ok;
+  }catch(e){ console.error(e); return false; }
+}
+async function storageListKeys(prefix){
+  if(!syncCode) return [];
+  try{
+    const res = await supaFetch(`${SUPABASE_TABLE}?sync_code=eq.${encodeURIComponent(syncCode)}&storage_key=like.${encodeURIComponent(prefix)}*&select=storage_key`);
+    if(!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(r=>r.storage_key);
+  }catch(e){ console.error(e); return []; }
 }
 
 /* ============ State ============ */
@@ -572,18 +661,44 @@ async function loadMonthData(y,m){
   return blankMonthData(y,m);
 }
 let saveTimer=null;
-function saveMonthData(){
+let pendingSaveKey=null;
+let pendingSavePayload=null;
+function saveMonthData(immediate){
   const status = document.getElementById('saveStatus');
   status.textContent = 'Saving…';
+  pendingSaveKey = monthKey(state.year, state.month);
+  pendingSavePayload = JSON.stringify({
+    completions: state.completions, mood: state.mood, sleep: state.sleep
+  });
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async ()=>{
-    const ok = await storageSet(monthKey(state.year, state.month), JSON.stringify({
-      completions: state.completions, mood: state.mood, sleep: state.sleep
-    }));
-    status.textContent = hasStorage ? (ok ? 'Saved ✓' : 'Save failed') : 'Autosave unavailable here';
-    setTimeout(()=>{ if(status.textContent!=='Autosave unavailable here') status.textContent=''; }, 2000);
-  }, 250);
+  const doSave = async ()=>{
+    const key = pendingSaveKey, payload = pendingSavePayload;
+    pendingSaveKey = null; pendingSavePayload = null;
+    const ok = await storageSet(key, payload);
+    status.textContent = syncCode ? (ok ? 'Saved ✓' : 'Save failed') : 'No sync code set';
+    setTimeout(()=>{ if(status.textContent!=='No sync code set') status.textContent=''; }, 2000);
+  };
+  if(immediate){
+    doSave();
+  } else {
+    saveTimer = setTimeout(doSave, 250);
+  }
 }
+/* Flush any pending (debounced) save the instant the tab/app is backgrounded
+   or closed — a setTimeout scheduled for later never fires if the phone/tab
+   closes first, which is why ticks made right before closing were lost. */
+function flushPendingSave(){
+  if(pendingSaveKey===null) return;
+  clearTimeout(saveTimer);
+  const key = pendingSaveKey, payload = pendingSavePayload;
+  pendingSaveKey = null; pendingSavePayload = null;
+  storageSet(key, payload);
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) flushPendingSave();
+});
+window.addEventListener('pagehide', flushPendingSave);
+window.addEventListener('blur', flushPendingSave);
 
 /* ============ Selects ============ */
 const yearSelect = document.getElementById('yearSelect');
@@ -603,6 +718,7 @@ yearSelect.addEventListener('change', ()=>{ state.year=+yearSelect.value; loadMo
 monthSelect.addEventListener('change', ()=>{ state.month=+monthSelect.value; loadMonth(); });
 
 async function loadMonth(){
+  flushPendingSave();
   const data = await loadMonthData(state.year, state.month);
   state.completions = data.completions;
   state.mood = data.mood;
@@ -697,7 +813,7 @@ function renderGrid(){
       renderMonthly();
       renderDailyChart();
       renderYearly();
-      saveMonthData();
+      saveMonthData(true);
     });
   });
 }
@@ -939,7 +1055,7 @@ document.getElementById('saveLogBtn').addEventListener('click', ()=>{
   state.mood[d-1] = mood;
   state.sleep[d-1] = sleep;
   renderWellness();
-  saveMonthData();
+  saveMonthData(true);
 });
 
 /* ============ Manage habits ============ */
@@ -1099,16 +1215,292 @@ async function exportPDF(){
   }
 }
 
-/* ============ Init ============ */
-(async function init(){
+/* ============ Backup / Restore ============ */
+/* Storage here lives only on this device/artifact instance, so this lets
+   the user pull everything (habits + every month's completions/mood/sleep)
+   into one JSON file they can keep safe and re-load later, even on a
+   different device. */
+async function backupAllData(){
+  const status = document.getElementById('backupStatus');
+  if(!syncCode){ status.textContent = 'Set a sync code first'; return; }
+  status.textContent = 'Gathering data…';
+  try{
+    flushPendingSave();
+    const monthKeys = await storageListKeys('month-');
+    const months = {};
+    for(const k of monthKeys){
+      const v = await storageGet(k);
+      if(v!==null) months[k] = v;
+    }
+    // Make sure the currently open month (which may have unsaved-to-list edits) is included.
+    months[monthKey(state.year, state.month)] = JSON.stringify({
+      completions: state.completions, mood: state.mood, sleep: state.sleep
+    });
+    const backup = {
+      type: 'habit-tracker-backup',
+      exportedAt: new Date().toISOString(),
+      habits: habits,
+      months: months
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `habit-tracker-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    status.textContent = 'Backup downloaded ✓';
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  }catch(err){
+    console.error(err);
+    status.textContent = 'Backup failed — see console';
+  }
+}
+
+async function restoreFromBackup(file){
+  const status = document.getElementById('backupStatus');
+  status.textContent = 'Restoring…';
+  try{
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if(backup.type !== 'habit-tracker-backup' || !backup.months || !Array.isArray(backup.habits)){
+      status.textContent = 'That file doesn\'t look like a valid backup';
+      return;
+    }
+    for(const [key, value] of Object.entries(backup.months)){
+      await storageSet(key, value);
+    }
+    habits = backup.habits;
+    await saveHabits();
+    renderManageList();
+    await loadMonth();
+    status.textContent = 'Restored ✓';
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  }catch(err){
+    console.error(err);
+    status.textContent = 'Restore failed — invalid file';
+  }
+}
+
+document.getElementById('backupBtn').addEventListener('click', backupAllData);
+document.getElementById('restoreBtn').addEventListener('click', ()=>{
+  const btn = document.getElementById('restoreBtn');
+  if(!btn.classList.contains('confirming')){
+    btn.classList.add('confirming');
+    btn.textContent = 'Overwrite current data?';
+    clearTimeout(btn._confirmTimer);
+    btn._confirmTimer = setTimeout(()=>{
+      btn.classList.remove('confirming');
+      btn.textContent = '⬆ Restore backup';
+    }, 3000);
+    return;
+  }
+  clearTimeout(btn._confirmTimer);
+  btn.classList.remove('confirming');
+  btn.textContent = '⬆ Restore backup';
+  document.getElementById('restoreFileInput').click();
+});
+document.getElementById('restoreFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(file) restoreFromBackup(file);
+});
+
+/* ============ Login / account gate ============ */
+/* The username becomes the sync_code namespace in Supabase; the password is
+   never sent or stored in plain text — only its SHA-256 hash is kept, in a
+   special "__password_hash" row inside that namespace. Login and Create
+   account are separate explicit modes — a login attempt on a username with
+   no account, or a signup on a username that's taken, is rejected. */
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+let gateMode = 'login'; // 'login' | 'signup' | 'reset'
+
+async function doLogin(username, password){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash===null){
+    syncCode = null;
+    return {ok:false, msg:'No account with that username — create one instead'};
+  }
+  const hash = await hashPassword(password);
+  if(existingHash===hash) return {ok:true};
+  syncCode = null;
+  return {ok:false, msg:'Incorrect password'};
+}
+
+async function doSignup(username, password, confirm, friendName){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  if(!friendName.trim()) return {ok:false, msg:"Enter a friend's name — it's used to recover your password"};
+  if(password.length<4) return {ok:false, msg:'Password must be at least 4 characters'};
+  if(password!==confirm) return {ok:false, msg:'Passwords don\'t match'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash!==null){
+    syncCode = null;
+    return {ok:false, msg:'That username is already taken — log in instead'};
+  }
+  const hash = await hashPassword(password);
+  const friendHash = await hashPassword(friendName.trim().toLowerCase());
+  const ok1 = await storageSet('__password_hash', hash);
+  const ok2 = await storageSet('__friend_name_hash', friendHash);
+  if(!ok1 || !ok2){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
+  return {ok:true};
+}
+
+async function doForgotPassword(username, friendName, newPassword, confirm){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  if(!friendName.trim()) return {ok:false, msg:"Enter the friend's name you set when you signed up"};
+  if(newPassword.length<4) return {ok:false, msg:'New password must be at least 4 characters'};
+  if(newPassword!==confirm) return {ok:false, msg:'Passwords don\'t match'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash===null){
+    syncCode = null;
+    return {ok:false, msg:'No account with that username'};
+  }
+  const existingFriendHash = await storageGet('__friend_name_hash');
+  const friendHash = await hashPassword(friendName.trim().toLowerCase());
+  if(existingFriendHash===null || existingFriendHash!==friendHash){
+    syncCode = null;
+    return {ok:false, msg:"That friend's name doesn't match our records"};
+  }
+  const newHash = await hashPassword(newPassword);
+  const ok = await storageSet('__password_hash', newHash);
+  if(!ok){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
+  return {ok:true};
+}
+
+async function proceedToApp(username){
+  await localSet('device_username', username);
   habits = await loadHabits();
   renderManageList();
   await loadMonth();
   document.getElementById('todayBtn').click();
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('app').style.display='block';
-  if(!hasStorage){
-    document.getElementById('saveStatus').textContent = 'Autosave unavailable in this view';
+}
+
+function setGateMode(mode){
+  gateMode = mode;
+  const friendInput = document.getElementById('syncFriendInput');
+  const confirmInput = document.getElementById('syncPassConfirmInput');
+  const btn = document.getElementById('syncGateBtn');
+  const toggle = document.getElementById('syncModeToggle');
+  const forgotBtn = document.getElementById('syncForgotBtn');
+  const title = document.getElementById('syncGateTitle');
+  const hint = document.getElementById('syncGateHint');
+  const passInput = document.getElementById('syncPassInput');
+  document.getElementById('syncGateStatus').textContent = '';
+  if(mode==='signup'){
+    friendInput.style.display='block';
+    confirmInput.style.display='block';
+    passInput.placeholder = 'Password';
+    confirmInput.placeholder = 'Confirm password';
+    btn.textContent = 'Create account';
+    toggle.style.display='inline';
+    toggle.textContent = 'Already have an account? Log in';
+    forgotBtn.style.display='none';
+    title.textContent = 'Create account';
+    hint.textContent = "Pick a username and password, plus a friend's name — that's used to recover your password later.";
+  } else if(mode==='reset'){
+    friendInput.style.display='block';
+    confirmInput.style.display='block';
+    passInput.placeholder = 'New password';
+    confirmInput.placeholder = 'Confirm new password';
+    btn.textContent = 'Reset password';
+    toggle.style.display='inline';
+    toggle.textContent = 'Back to log in';
+    forgotBtn.style.display='none';
+    title.textContent = 'Reset password';
+    hint.textContent = "Enter the friend's name you set when you signed up, plus a new password.";
+  } else {
+    friendInput.style.display='none';
+    friendInput.value='';
+    confirmInput.style.display='none';
+    confirmInput.value='';
+    passInput.placeholder = 'Password';
+    btn.textContent = 'Log in';
+    toggle.style.display='inline';
+    toggle.textContent = 'New here? Create an account';
+    forgotBtn.style.display='inline';
+    title.textContent = 'Log in';
+    hint.textContent = 'Use the same username and password on every device to load the same habit history.';
+  }
+}
+document.getElementById('syncModeToggle').addEventListener('click', ()=>{
+  if(gateMode==='reset'){ setGateMode('login'); return; }
+  setGateMode(gateMode==='login' ? 'signup' : 'login');
+});
+document.getElementById('syncForgotBtn').addEventListener('click', ()=>{
+  setGateMode('reset');
+});
+
+async function attemptGateSubmit(){
+  const uname = document.getElementById('syncUserInput').value;
+  const pw = document.getElementById('syncPassInput').value;
+  const confirm = document.getElementById('syncPassConfirmInput').value;
+  const friend = document.getElementById('syncFriendInput').value;
+  const statusEl = document.getElementById('syncGateStatus');
+  if(!uname.trim() || !pw){ statusEl.textContent = 'Enter a username and password'; return; }
+  let res;
+  if(gateMode==='signup'){
+    statusEl.textContent = 'Creating account…';
+    res = await doSignup(uname, pw, confirm, friend);
+  } else if(gateMode==='reset'){
+    statusEl.textContent = 'Resetting…';
+    res = await doForgotPassword(uname, friend, pw, confirm);
+  } else {
+    statusEl.textContent = 'Checking…';
+    res = await doLogin(uname, pw);
+  }
+  if(!res.ok){ statusEl.textContent = res.msg; return; }
+  statusEl.textContent = '';
+  document.getElementById('syncPassInput').value = '';
+  document.getElementById('syncPassConfirmInput').value = '';
+  document.getElementById('syncFriendInput').value = '';
+  await proceedToApp(uname.trim().toLowerCase());
+}
+document.getElementById('syncGateBtn').addEventListener('click', attemptGateSubmit);
+document.getElementById('syncUserInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+document.getElementById('syncFriendInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+document.getElementById('syncPassInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && gateMode==='login') attemptGateSubmit(); });
+document.getElementById('syncPassConfirmInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+
+function doLogout(){
+  syncCode = null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('loadingOverlay').style.display='flex';
+  document.getElementById('loadingText').style.display='none';
+  document.getElementById('syncPassInput').value = '';
+  setGateMode('login');
+  document.getElementById('syncGate').style.display='flex';
+  document.getElementById('syncPassInput').focus();
+}
+document.getElementById('syncCodeBtn').addEventListener('click', doLogout);
+document.getElementById('profileLogoutBtn').addEventListener('click', doLogout);
+
+/* ============ Init ============ */
+(async function init(){
+  document.getElementById('loadingText').style.display='none';
+  setGateMode('login');
+  document.getElementById('syncGate').style.display='flex';
+  const cachedUser = await localGet('device_username');
+  if(cachedUser){
+    document.getElementById('syncUserInput').value = cachedUser;
+    document.getElementById('syncPassInput').focus();
+  } else {
+    document.getElementById('syncUserInput').focus();
   }
 })();
 </script>
