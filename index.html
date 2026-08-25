@@ -828,10 +828,40 @@ async function supaFetch(path, options={}){
   });
 }
 
+/* Auth values (account password, friend-name recovery, secret-habits
+   password) live in the `users` table, one row per username, instead of
+   inside habit_tracker_data. These three keys are the only ones routed
+   there — everything else (habits, completions, mood, sleep) stays in
+   habit_tracker_data as before. */
+const AUTH_KEY_TO_COLUMN = {
+  '__password_hash': 'password_hash',
+  '__friend_name_hash': 'friend_name_hash',
+  '__secret_password_hash': 'secret_password_hash'
+};
+async function userFieldGet(column){
+  try{
+    const res = await supaFetch(`users?username=eq.${encodeURIComponent(syncCode)}&select=${column}`);
+    if(!res.ok) return null;
+    const rows = await res.json();
+    return rows.length ? (rows[0][column] ?? null) : null;
+  }catch(e){ console.error(e); return null; }
+}
+async function userFieldSet(column, value){
+  try{
+    const res = await supaFetch(`users?on_conflict=username`, {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ username: syncCode, [column]: value, updated_at: new Date().toISOString() }])
+    });
+    return res.ok;
+  }catch(e){ console.error(e); return false; }
+}
+
 /* Every read/write of actual app data (habits, completions, mood, sleep)
    goes through these three functions, keyed by the person's sync code. */
 async function storageGet(key){
   if(!syncCode) return null;
+  if(key in AUTH_KEY_TO_COLUMN) return userFieldGet(AUTH_KEY_TO_COLUMN[key]);
   try{
     const res = await supaFetch(`${SUPABASE_TABLE}?sync_code=eq.${encodeURIComponent(syncCode)}&storage_key=eq.${encodeURIComponent(key)}&select=value`);
     if(!res.ok) return null;
@@ -841,6 +871,7 @@ async function storageGet(key){
 }
 async function storageSet(key, value){
   if(!syncCode) return false;
+  if(key in AUTH_KEY_TO_COLUMN) return userFieldSet(AUTH_KEY_TO_COLUMN[key], value);
   try{
     const res = await supaFetch(SUPABASE_TABLE, {
       method:'POST',
