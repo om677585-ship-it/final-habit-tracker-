@@ -467,6 +467,23 @@ footer{
 #app.app-visible{opacity:1;}
 #syncGateStatus.ok{color:var(--accent)!important;}
 
+/* ---------- Auth landing (Log in / Create account / Forgot password) ---------- */
+.gate-landing-btn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:13px 18px;border-radius:10px;cursor:pointer;width:100%;
+  transition:opacity .18s ease, transform .12s ease, border-color .18s ease;
+}
+.gate-landing-btn:hover{border-color:var(--accent2);transform:translateY(-1px);}
+.gate-landing-btn-primary{
+  background:var(--grad);color:#15161A;border:none;
+}
+.gate-landing-btn-primary:hover{opacity:.88;}
+#gateBackBtn{
+  align-self:flex-start;background:none;border:none;color:#7C93AA;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;padding:2px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width:900px){
   .stats-wrap{grid-template-columns:1fr 1fr;}
@@ -496,18 +513,28 @@ footer{
   <div id="loadingText">Loading your data…</div>
   <div id="syncGate" class="auth-card" style="display:none">
     <div class="auth-logo">🌿</div>
-    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;" id="syncGateTitle">Log in</div>
-    <div style="font-size:12px;color:#9B9A93;text-align:center;" id="syncGateHint">Use the same username and password on every device to load the same habit history.</div>
-    <input type="text" id="syncUserInput" placeholder="Username" autocomplete="username" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
-    <input type="text" id="syncFriendInput" placeholder="A friend's name (for recovery)" autocomplete="off" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
-    <input type="password" id="syncPassInput" placeholder="Password" autocomplete="current-password" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
-    <input type="password" id="syncPassConfirmInput" placeholder="Confirm password" autocomplete="new-password" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
-    <button type="button" id="syncGateBtn" style="font-family:'Sora',sans-serif;font-weight:700;font-size:13px;background:linear-gradient(135deg,#6E8B7A,#7C93AA);color:#15161A;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;width:100%;">Log in</button>
-    <div style="display:flex;justify-content:space-between;width:100%;">
-      <button type="button" id="syncModeToggle" style="background:none;border:none;color:#7C93AA;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;text-decoration:underline;padding:2px;">New here? Create an account</button>
-      <button type="button" id="syncForgotBtn" style="background:none;border:none;color:#A57C82;font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;text-decoration:underline;padding:2px;">Forgot password?</button>
+
+    <!-- Landing: pick Log in / Create account / Forgot password -->
+    <div id="gateLanding" style="display:flex;flex-direction:column;gap:10px;width:100%;">
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;text-align:center;">Welcome</div>
+      <div style="font-size:12px;color:#9B9A93;text-align:center;margin-bottom:4px;">Choose an option to continue</div>
+      <button type="button" id="landingLoginBtn" class="gate-landing-btn gate-landing-btn-primary">Log in</button>
+      <button type="button" id="landingSignupBtn" class="gate-landing-btn">Create account</button>
+      <button type="button" id="landingForgotBtn" class="gate-landing-btn">Forgot password?</button>
     </div>
-    <div id="syncGateStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9B9A93;min-height:14px;"></div>
+
+    <!-- Form: shown after picking an option above -->
+    <div id="gateForm" style="display:none;flex-direction:column;gap:10px;width:100%;">
+      <button type="button" id="gateBackBtn">&larr; Back</button>
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;" id="syncGateTitle">Log in</div>
+      <div style="font-size:12px;color:#9B9A93;text-align:center;" id="syncGateHint">Use the same username and password on every device to load the same habit history.</div>
+      <input type="text" id="syncUserInput" placeholder="Username" autocomplete="username" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="text" id="syncFriendInput" placeholder="A friend's name (for recovery)" autocomplete="off" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="password" id="syncPassInput" placeholder="Password" autocomplete="current-password" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="password" id="syncPassConfirmInput" placeholder="Confirm password" autocomplete="new-password" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <button type="button" id="syncGateBtn" style="font-family:'Sora',sans-serif;font-weight:700;font-size:13px;background:linear-gradient(135deg,#6E8B7A,#7C93AA);color:#15161A;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;width:100%;">Log in</button>
+      <div id="syncGateStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9B9A93;min-height:14px;"></div>
+    </div>
   </div>
 </div>
 <div id="app" style="display:none">
@@ -804,16 +831,26 @@ const SUPABASE_TABLE = 'habit_tracker_data';
 
 let syncCode = null;
 
-/* Local, device-only cache — used ONLY to remember which sync code this
-   device last used, so the person doesn't retype it every visit. */
-const hasLocalStorage = !!(window.storage && typeof window.storage.get === 'function');
+/* Local, device-only cache — used to remember which account this device
+   last logged into, so the person isn't asked to log in on every visit.
+   Uses the browser's own localStorage (this page runs on GitHub Pages,
+   not inside a Claude artifact, so window.storage isn't available there
+   — that mismatch was why the login was never actually "remembered"). */
+const LS_PREFIX = 'habitTracker_';
+const hasLocalStorage = (function(){
+  try{ return typeof window.localStorage !== 'undefined'; }catch(e){ return false; }
+})();
 async function localGet(key){
   if(!hasLocalStorage) return null;
-  try{ const res = await window.storage.get(key, false); return res ? res.value : null; }catch(e){ return null; }
+  try{ const v = window.localStorage.getItem(LS_PREFIX+key); return v===null || v==='' ? null : v; }catch(e){ return null; }
 }
 async function localSet(key, value){
   if(!hasLocalStorage) return false;
-  try{ const res = await window.storage.set(key, value, false); return !!res; }catch(e){ return false; }
+  try{ window.localStorage.setItem(LS_PREFIX+key, value); return true; }catch(e){ return false; }
+}
+async function localRemove(key){
+  if(!hasLocalStorage) return false;
+  try{ window.localStorage.removeItem(LS_PREFIX+key); return true; }catch(e){ return false; }
 }
 
 async function supaFetch(path, options={}){
@@ -1744,11 +1781,12 @@ async function doSignup(username, password, confirm, friendName){
   }
   const hash = await hashPassword(password);
   const friendHash = await hashPassword(friendName.trim().toLowerCase());
-  const [ok1, ok2] = await Promise.all([
+  const [ok1, ok2, ok3] = await Promise.all([
     storageSet('__password_hash', hash),
-    storageSet('__friend_name_hash', friendHash)
+    storageSet('__friend_name_hash', friendHash),
+    userFieldSet('friend_name', friendName.trim())
   ]);
-  if(!ok1 || !ok2){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
+  if(!ok1 || !ok2 || !ok3){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
   return {ok:true};
 }
 
@@ -1780,6 +1818,10 @@ async function proceedToApp(username){
   // Kick off the device-username save without blocking — it doesn't need
   // to finish before the rest of the app loads.
   const localSetPromise = localSet('device_username', username);
+  // Record when this account was last opened (stored in UTC by Postgres;
+  // convert to IST when reading it back, e.g. `last_login_at AT TIME ZONE
+  // 'Asia/Kolkata'`). Fire-and-forget — shouldn't block the app loading.
+  userFieldSet('last_login_at', new Date().toISOString());
   habits = await loadHabits();
   lockSecretHabits();
   renderManageList();
@@ -1797,8 +1839,6 @@ function setGateMode(mode){
   const friendInput = document.getElementById('syncFriendInput');
   const confirmInput = document.getElementById('syncPassConfirmInput');
   const btn = document.getElementById('syncGateBtn');
-  const toggle = document.getElementById('syncModeToggle');
-  const forgotBtn = document.getElementById('syncForgotBtn');
   const title = document.getElementById('syncGateTitle');
   const hint = document.getElementById('syncGateHint');
   const passInput = document.getElementById('syncPassInput');
@@ -1809,9 +1849,6 @@ function setGateMode(mode){
     passInput.placeholder = 'Password';
     confirmInput.placeholder = 'Confirm password';
     btn.textContent = 'Create account';
-    toggle.style.display='inline';
-    toggle.textContent = 'Already have an account? Log in';
-    forgotBtn.style.display='none';
     title.textContent = 'Create account';
     hint.textContent = "Pick a username and password, plus a friend's name — that's used to recover your password later.";
   } else if(mode==='reset'){
@@ -1820,9 +1857,6 @@ function setGateMode(mode){
     passInput.placeholder = 'New password';
     confirmInput.placeholder = 'Confirm new password';
     btn.textContent = 'Reset password';
-    toggle.style.display='inline';
-    toggle.textContent = 'Back to log in';
-    forgotBtn.style.display='none';
     title.textContent = 'Reset password';
     hint.textContent = "Enter the friend's name you set when you signed up, plus a new password.";
   } else {
@@ -1832,20 +1866,32 @@ function setGateMode(mode){
     confirmInput.value='';
     passInput.placeholder = 'Password';
     btn.textContent = 'Log in';
-    toggle.style.display='inline';
-    toggle.textContent = 'New here? Create an account';
-    forgotBtn.style.display='inline';
     title.textContent = 'Log in';
     hint.textContent = 'Use the same username and password on every device to load the same habit history.';
   }
 }
-document.getElementById('syncModeToggle').addEventListener('click', ()=>{
-  if(gateMode==='reset'){ setGateMode('login'); return; }
-  setGateMode(gateMode==='login' ? 'signup' : 'login');
-});
-document.getElementById('syncForgotBtn').addEventListener('click', ()=>{
-  setGateMode('reset');
-});
+
+/* Landing screen — pick Log in / Create account / Forgot password, then
+   the form panel swaps in with just the fields that mode needs. */
+function showGateLanding(){
+  document.getElementById('syncUserInput').value = '';
+  document.getElementById('syncPassInput').value = '';
+  document.getElementById('syncPassConfirmInput').value = '';
+  document.getElementById('syncFriendInput').value = '';
+  document.getElementById('syncGateStatus').textContent = '';
+  document.getElementById('gateForm').style.display = 'none';
+  document.getElementById('gateLanding').style.display = 'flex';
+}
+function showGateForm(mode){
+  setGateMode(mode);
+  document.getElementById('gateLanding').style.display = 'none';
+  document.getElementById('gateForm').style.display = 'flex';
+  document.getElementById('syncUserInput').focus();
+}
+document.getElementById('landingLoginBtn').addEventListener('click', ()=> showGateForm('login'));
+document.getElementById('landingSignupBtn').addEventListener('click', ()=> showGateForm('signup'));
+document.getElementById('landingForgotBtn').addEventListener('click', ()=> showGateForm('reset'));
+document.getElementById('gateBackBtn').addEventListener('click', showGateLanding);
 
 async function attemptGateSubmit(){
   const uname = document.getElementById('syncUserInput').value;
@@ -1886,13 +1932,13 @@ document.getElementById('syncPassConfirmInput').addEventListener('keydown', (e)=
 
 function doLogout(){
   syncCode = null;
+  localRemove('device_username');
   document.getElementById('app').style.display='none';
   document.getElementById('loadingOverlay').style.display='flex';
   document.getElementById('loadingText').style.display='none';
-  document.getElementById('syncPassInput').value = '';
   setGateMode('login');
+  showGateLanding();
   document.getElementById('syncGate').style.display='flex';
-  document.getElementById('syncPassInput').focus();
 }
 /* "Switch account" masthead button removed; logout is still available via
    profile menu → "🚪 Log out" (see modalLogoutBtn), which also calls doLogout(). */
@@ -2041,15 +2087,33 @@ document.getElementById('csSubmitBtn').addEventListener('click', async ()=>{
 
 /* ============ Init ============ */
 (async function init(){
+  const cachedUser = await localGet('device_username');
+  if(cachedUser){
+    // Already logged in on this device — skip the gate and load straight
+    // into the app. Only falls back to the login screen if that somehow
+    // fails (e.g. the account no longer exists).
+    document.getElementById('loadingText').textContent = 'Welcome back — loading your data…';
+    document.getElementById('loadingText').style.display='block';
+    syncCode = cachedUser;
+    try{
+      await proceedToApp(cachedUser);
+      return;
+    }catch(e){
+      console.error(e);
+      syncCode = null;
+    }
+  }
   document.getElementById('loadingText').style.display='none';
   setGateMode('login');
   document.getElementById('syncGate').style.display='flex';
-  const cachedUser = await localGet('device_username');
   if(cachedUser){
+    // We know this device's username already — skip straight to the login
+    // form, pre-filled, instead of making them pick from the landing menu.
+    showGateForm('login');
     document.getElementById('syncUserInput').value = cachedUser;
     document.getElementById('syncPassInput').focus();
   } else {
-    document.getElementById('syncUserInput').focus();
+    showGateLanding();
   }
 })();
 </script>
