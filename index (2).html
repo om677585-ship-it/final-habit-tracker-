@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Habit Tracker — Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236E8B7A'/%3E%3Cstop offset='1' stop-color='%237C93AA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%231B1C20'/%3E%3Ccircle cx='32' cy='32' r='20' fill='url(%23g)'/%3E%3Cpath d='M23 33l6 6 12-14' stroke='%2315161A' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#1B1C20;
+  --bg2:#202126;
+  --surface:#232429;
+  --surface2:#292A31;
+  --line: rgba(255,255,255,0.07);
+  --text:#E7E6E1;
+  --text-soft:#9B9A93;
+  --text-faint:#67665F;
+
+  --accent:#6E8B7A;
+  --accent2:#7C93AA;
+  --accent3:#B08968;
+  --accent4:#A57C82;
+  --danger:#B06868;
+
+  --grad: linear-gradient(135deg, var(--accent), var(--accent2));
+  --grad-warm: linear-gradient(135deg, var(--accent3), var(--accent4));
+  --radius:14px;
+
+  --fs-h1: clamp(22px, 4.2vw, 32px);
+  --fs-h2: clamp(15px, 2.2vw, 18px);
+  --fs-stat: clamp(20px, 3.6vw, 28px);
+  --pad-app: clamp(14px, 4vw, 32px);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(110,139,122,0.10), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(124,147,170,0.08), transparent 40%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+#app{max-width:1240px;margin:0 auto;padding:var(--pad-app) var(--pad-app) 80px;}
+
+/* ---------- Masthead ---------- */
+.masthead{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  flex-wrap:wrap;gap:16px;
+  padding-bottom:20px;border-bottom:1px solid var(--line);
+  position:relative;
+}
+.profile-btn{
+  position:absolute;top:0;right:0;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--grad);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#15161A;
+  transition:opacity .18s ease, transform .12s ease;
+}
+.profile-btn:hover{opacity:.88;transform:translateY(-1px);}
+.title-block .eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent2);margin-bottom:8px;
+}
+.title-block h1{
+  font-family:'Sora',sans-serif;font-weight:800;font-size:var(--fs-h1);margin:0;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:-.01em;
+}
+.controls-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+select,input[type=number],input[type=text]{
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:10px;
+  padding:9px 12px;
+  -webkit-appearance:none;appearance:none;
+}
+select{cursor:pointer;}
+select:hover,input:hover{border-color:var(--accent2);}
+input:focus,select:focus{outline:none;border-color:var(--accent2);}
+.masthead-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;width:100%;max-width:280px;}
+#exportBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;
+  background:var(--grad);color:#15161A;border:none;
+  padding:11px 20px;border-radius:10px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:opacity .18s ease, transform .12s ease;
+  white-space:nowrap;
+}
+#exportBtn:hover{opacity:.88;transform:translateY(-1px);}
+#exportBtn:disabled{opacity:.5;cursor:progress;transform:none;}
+.export-status,.save-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-soft);min-height:14px;}
+#backupBtn,#restoreBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:9px 14px;border-radius:10px;cursor:pointer;white-space:nowrap;flex:1;
+}
+#backupBtn:hover,#restoreBtn:hover{border-color:var(--accent2);}
+#restoreBtn.confirming{border-color:var(--danger);color:#fff;background:var(--danger);}
+
+/* ---------- Level badge ---------- */
+.level-badge{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;padding:6px 14px 6px 6px;margin-top:10px;
+  width:fit-content;
+}
+.level-badge .lv-circle{
+  width:30px;height:30px;border-radius:50%;background:var(--grad);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Sora',sans-serif;font-weight:800;font-size:12px;color:#15161A;
+  flex-shrink:0;
+}
+.level-badge .lv-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-soft);}
+.level-badge .lv-text b{color:var(--text);}
+
+/* ---------- Section wrapper ---------- */
+.section{margin-top:34px;}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:6px;}
+.section-head h2{font-family:'Sora',sans-serif;font-weight:700;font-size:var(--fs-h2);margin:0;}
+.section-head .tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);}
+.card{
+  background:linear-gradient(180deg, var(--surface), var(--surface2));
+  border:1px solid var(--line);border-radius:var(--radius);padding:20px;
+  box-shadow:0 10px 30px -14px rgba(0,0,0,0.5);
+}
+
+/* ---------- Stats + donut (used for daily, monthly & yearly) ---------- */
+.stats-wrap{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:14px;align-items:stretch;}
+.stat-card{
+  background:linear-gradient(180deg, var(--surface), var(--surface2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;position:relative;overflow:hidden;
+  box-shadow:0 10px 30px -14px rgba(0,0,0,0.5);
+}
+.stat-card::after{
+  content:'';position:absolute;inset:0;border-radius:var(--radius);
+  padding:1px;background:var(--accent-grad,var(--grad));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;opacity:.35;pointer-events:none;
+}
+.stat-card .label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:10px;}
+.stat-card .value{font-family:'Sora',sans-serif;font-weight:800;font-size:var(--fs-stat);}
+.donut-card{
+  background:linear-gradient(180deg, var(--surface), var(--surface2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 20px;display:flex;align-items:center;gap:16px;min-width:200px;
+  box-shadow:0 10px 30px -14px rgba(0,0,0,0.5);
+}
+.donut-card canvas{width:100px!important;height:100px!important;}
+.donut-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-soft);}
+.donut-label .big{display:block;font-family:'Sora',sans-serif;font-weight:800;font-size:22px;color:var(--text);margin-bottom:2px;}
+
+/* ---------- Charts ---------- */
+.chart-box canvas{max-width:100%;}
+
+/* ---------- Mini tables (monthly per-habit / yearly per-month) ---------- */
+.mini-table-wrap{overflow-x:auto;}
+.mini-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:420px;}
+.mini-table th{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-soft);text-align:left;
+  padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+.mini-table th.num, .mini-table td.num{text-align:right;}
+.mini-table td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--text);}
+.mini-table tr:last-child td{border-bottom:none;}
+.mini-table td.num{font-family:'JetBrains Mono',monospace;}
+.mini-table .name-cell{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap;}
+.mini-table .rate-pill{
+  font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 9px;border-radius:10px;
+  background:rgba(255,255,255,0.06);display:inline-block;
+}
+.mini-table tr.current-row td{background:rgba(124,147,170,0.08);}
+
+/* ---------- Grid ---------- */
+#sec-habits .card{padding:16px 4px 20px 16px;}
+.grid-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;}
+.habit-grid-wrap{display:flex;align-items:flex-start;}
+.habit-grid-labels{
+  flex:0 0 auto;
+  width:150px;
+  background:var(--surface2);
+  border-right:1px solid var(--line);
+}
+.habit-grid{
+  display:grid;
+  grid-auto-rows:34px;
+  align-items:center;
+}
+.grid-row-label{
+  height:34px;
+  padding-right:12px;padding-left:2px;
+  font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;gap:8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.grid-row-label .ic{font-size:14px;flex-shrink:0;}
+.grid-head-label{
+  height:34px;
+}
+.grid-day-head{
+  font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-faint);
+  text-align:center;
+}
+.grid-day-head .wd{display:block;color:var(--text-soft);}
+.grid-day-head.today{color:var(--accent2);}
+.grid-day-head.weekstart{border-left:1px solid var(--line);}
+.grid-cell{
+  width:26px;height:26px;margin:0 auto;border-radius:7px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.02);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s ease, border-color .1s ease;
+}
+.grid-cell.weekstart{margin-left:6px;}
+.grid-cell:hover{transform:scale(1.1);border-color:var(--accent2);}
+.grid-cell.done{
+  background:var(--grad);
+  border-color:transparent;
+}
+.grid-cell.done::after{content:'✓';font-size:13px;color:#15161A;font-weight:800;}
+.grid-cell.pulse{animation:pulse .3s ease;}
+@keyframes pulse{
+  0%{transform:scale(1);}
+  40%{transform:scale(1.28);}
+  100%{transform:scale(1);}
+}
+.empty-note{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-faint);padding:10px 4px;}
+
+/* ---------- Secret habits ---------- */
+.secret-block{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);}
+.secret-toggle-btn{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;
+  background:var(--surface2);color:var(--text-soft);border:1px solid var(--line);
+  padding:9px 16px;border-radius:20px;cursor:pointer;
+}
+.secret-toggle-btn:hover{border-color:var(--accent2);color:var(--text);}
+.secret-unlock-form{margin-top:12px;max-width:360px;}
+.secret-hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);margin:0 0 10px;}
+.secret-unlock-row{display:flex;gap:8px;flex-wrap:wrap;}
+.secret-unlock-row input{flex:1;min-width:120px;}
+#secretUnlockBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;
+  background:var(--grad-warm);color:#15161A;border:none;
+  padding:9px 16px;border-radius:10px;cursor:pointer;white-space:nowrap;
+}
+#secretUnlockBtn:hover{opacity:.88;}
+.secret-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--danger);min-height:14px;margin-top:8px;}
+.secret-unlocked-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.secret-unlocked-title{font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;color:var(--accent3);}
+#secretLockBtn{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px;
+  background:var(--surface2);color:var(--text-soft);border:1px solid var(--line);
+  padding:6px 12px;border-radius:10px;cursor:pointer;
+}
+#secretLockBtn:hover{border-color:var(--accent2);color:var(--text);}
+.secret-checkbox-field{flex-direction:row!important;align-items:center;gap:6px!important;}
+.secret-checkbox-field label{text-transform:none!important;font-size:12px!important;}
+.secret-checkbox-field input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent3);cursor:pointer;}
+.manage-name .lock-ic{margin-right:4px;opacity:.75;}
+.secret-badge{font-size:11px;opacity:.7;margin-left:4px;}
+
+/* ---------- Profile modal ---------- */
+.modal-overlay{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(10,10,12,0.72);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal-card{
+  position:relative;
+  width:100%;max-width:380px;
+  background:linear-gradient(180deg, var(--surface), var(--surface2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 24px 60px rgba(0,0,0,0.45), 0 2px 0 rgba(255,255,255,0.03) inset;
+  padding:28px 24px 24px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.modal-x{
+  position:absolute;top:14px;right:14px;
+  background:var(--surface);border:1px solid var(--line);color:var(--text-soft);
+  width:26px;height:26px;border-radius:50%;
+  font-size:12px;cursor:pointer;padding:0;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-x:hover{color:var(--text);border-color:var(--accent2);}
+.modal-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:var(--grad);
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;margin-bottom:2px;
+  box-shadow:0 6px 16px rgba(0,0,0,0.3);
+}
+.modal-title{font-family:'Sora',sans-serif;font-weight:700;font-size:17px;margin:0 0 2px;letter-spacing:-.2px;}
+.modal-hint{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-faint);margin:0 0 6px;line-height:1.6;}
+.modal-menu-btn{
+  font-family:'Sora',sans-serif;font-weight:600;font-size:13px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:13px 14px;border-radius:10px;cursor:pointer;text-align:left;
+  display:flex;align-items:center;gap:10px;
+  transition:border-color .15s,transform .15s;
+}
+.modal-menu-btn:hover{border-color:var(--accent2);transform:translateX(2px);}
+.modal-menu-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+.modal-field{display:flex;flex-direction:column;gap:5px;}
+.modal-field-label{
+  font-family:'Sora',sans-serif;font-weight:600;font-size:11px;
+  color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;
+}
+.modal-input{
+  font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;
+  background:var(--surface);color:#F7F6F2;
+  border:1px solid var(--line);border-radius:9px;
+  padding:11px 13px;width:100%;
+  letter-spacing:.3px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.modal-input:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 3px rgba(124,147,170,0.18);}
+.modal-input::placeholder{color:var(--text-faint);}
+.modal-input:disabled{opacity:.4;cursor:not-allowed;}
+.modal-or-divider{
+  display:flex;align-items:center;gap:10px;
+  margin:-2px 0;
+  color:var(--text-faint);font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.6px;
+}
+.modal-or-divider::before,.modal-or-divider::after{
+  content:'';flex:1;height:1px;background:var(--line);
+}
+.modal-link{
+  background:none;border:none;color:var(--accent2);
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  cursor:pointer;text-decoration:none;border-bottom:1px dashed rgba(124,147,170,0.5);
+  padding:2px 0;text-align:left;align-self:flex-start;
+}
+.modal-link:hover{color:var(--text);border-bottom-color:var(--text);}
+.modal-submit-btn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.2px;
+  background:var(--grad);color:#15161A;border:none;
+  padding:13px 16px;border-radius:9px;cursor:pointer;margin-top:4px;
+  box-shadow:0 8px 20px -6px rgba(110,139,122,0.55);
+  transition:transform .15s,box-shadow .15s,opacity .15s;
+}
+.modal-submit-btn:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 10px 24px -6px rgba(110,139,122,0.65);}
+.modal-submit-btn:active{transform:translateY(0);}
+.modal-back-btn{
+  background:none;border:none;color:var(--text-soft);
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  cursor:pointer;padding:2px;align-self:flex-start;
+  display:flex;align-items:center;gap:4px;
+}
+.modal-back-btn:hover{color:var(--text);}
+.modal-status{
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--danger);min-height:14px;
+  line-height:1.5;
+}
+.modal-status:not(:empty){padding:8px 10px;border-radius:7px;background:rgba(176,104,104,0.1);border:1px solid rgba(176,104,104,0.25);}
+.modal-status.ok{color:var(--accent);background:rgba(110,139,122,0.1);border-color:rgba(110,139,122,0.28);}
+
+/* ---------- Wellness ---------- */
+.legend-row{display:flex;gap:18px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-soft);flex-wrap:wrap;}
+.legend-row .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;}
+.wellness-hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);margin-top:10px;}
+.log-form{
+  display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
+  background:rgba(255,255,255,0.03);border:1px solid var(--line);
+  border-radius:10px;padding:14px 16px;margin-bottom:18px;
+}
+.log-field{display:flex;flex-direction:column;gap:6px;}
+.log-field label{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em;}
+.log-field input[type=number]{width:90px;}
+.mood-picker{display:flex;gap:6px;}
+.mood-btn{
+  width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text-soft);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px;
+  transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+.mood-btn:hover{border-color:var(--accent2);}
+.mood-btn.active{background:var(--grad);color:#15161A;border-color:transparent;}
+#saveLogBtn,#todayBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:9px 16px;border-radius:10px;cursor:pointer;
+}
+#saveLogBtn{background:var(--grad);color:#15161A;border:none;}
+#saveLogBtn:hover{opacity:.88;}
+#todayBtn:hover{border-color:var(--accent2);}
+
+/* ---------- Manage habits ---------- */
+.manage-card{display:flex;flex-direction:column;gap:18px;}
+.add-habit-form{
+  display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;
+  background:rgba(255,255,255,0.03);border:1px solid var(--line);
+  border-radius:10px;padding:14px 16px;
+}
+.add-habit-form input[type=text]{min-width:0;}
+#habitIconInput{width:64px;text-align:center;}
+#habitNameInput{flex:1;min-width:160px;}
+#addHabitBtn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;
+  background:var(--grad);color:#15161A;border:none;
+  padding:10px 18px;border-radius:10px;cursor:pointer;white-space:nowrap;
+}
+#addHabitBtn:hover{opacity:.88;}
+.manage-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;}
+.manage-list li{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 4px;border-bottom:1px solid var(--line);
+}
+.manage-list li:last-child{border-bottom:none;}
+.manage-name{display:flex;align-items:center;gap:10px;font-weight:600;font-size:13.5px;}
+.manage-name .ic{font-size:16px;}
+.del-btn{
+  background:transparent;border:1px solid var(--line);color:var(--text-soft);
+  min-width:32px;height:32px;padding:0 8px;border-radius:10px;cursor:pointer;font-size:13px;
+  font-family:'JetBrains Mono',monospace;font-weight:600;
+  transition:border-color .12s ease,color .12s ease,background .12s ease;
+  flex-shrink:0;white-space:nowrap;
+}
+.del-btn:hover{border-color:var(--danger);color:var(--danger);background:rgba(176,104,104,0.1);}
+.del-btn.confirming{border-color:var(--danger);color:#fff;background:var(--danger);}
+
+footer{
+  margin-top:50px;padding-top:16px;border-top:1px solid var(--line);
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+}
+
+#pdfCover{
+  position:fixed;left:-9999px;top:0;width:780px;
+  background:#1B1C20;padding:50px 46px;font-family:'Inter',sans-serif;color:#E7E6E1;
+}
+#pdfCover h1{font-family:'Sora',sans-serif;font-size:30px;margin:0 0 4px;}
+#pdfCover .cover-sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:#9B9A93;margin-bottom:28px;}
+#pdfCover .cover-line{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);font-size:14px;}
+#pdfCover .cover-line b{font-family:'JetBrains Mono',monospace;}
+#pdfCover .cover-check{padding:6px 0;font-size:14px;}
+#pdfCover .cover-check b{color:var(--accent2);margin-right:8px;}
+
+/* ---------- Loading ---------- */
+#loadingOverlay{
+  position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;color:var(--text-soft);font-size:13px;z-index:50;padding:20px;
+}
+.auth-card{
+  background:linear-gradient(180deg, var(--surface), var(--surface2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 24px 60px -18px rgba(0,0,0,0.55);
+  padding:32px 26px 26px;
+  display:flex;flex-direction:column;gap:14px;
+  width:100%;max-width:340px;align-items:center;
+}
+.auth-logo{
+  width:44px;height:44px;border-radius:12px;background:var(--grad);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 8px 20px -6px rgba(110,139,122,0.5);margin-bottom:2px;
+}
+#app{opacity:0;transition:opacity .3s ease;}
+#app.app-visible{opacity:1;}
+#syncGateStatus.ok{color:var(--accent)!important;}
+
+/* ---------- Auth landing (Log in / Create account / Forgot password) ---------- */
+.gate-landing-btn{
+  font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;
+  background:var(--surface2);color:var(--text);border:1px solid var(--line);
+  padding:13px 18px;border-radius:10px;cursor:pointer;width:100%;
+  transition:opacity .18s ease, transform .12s ease, border-color .18s ease;
+}
+.gate-landing-btn:hover{border-color:var(--accent2);transform:translateY(-1px);}
+.gate-landing-btn-primary{
+  background:var(--grad);color:#15161A;border:none;
+}
+.gate-landing-btn-primary:hover{opacity:.88;}
+#gateBackBtn{
+  align-self:flex-start;background:none;border:none;color:#7C93AA;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;cursor:pointer;padding:2px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  .stats-wrap{grid-template-columns:1fr 1fr;}
+  .donut-card{grid-column:1/-1;}
+}
+@media (max-width:600px){
+  .masthead{flex-direction:column;align-items:stretch;}
+  .masthead-right{align-items:stretch;max-width:none;}
+  .controls-row{width:100%;}
+  .controls-row select{flex:1;min-width:0;}
+  #exportBtn{width:100%;justify-content:center;}
+  .stats-wrap{grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-card{padding:14px;}
+  .donut-card{padding:12px 14px;min-width:0;}
+  .card{padding:14px;}
+  #sec-habits .card{padding:12px 2px 16px 12px;}
+  .log-form{flex-direction:column;align-items:stretch;}
+  .mood-picker{justify-content:space-between;}
+  .add-habit-form{flex-direction:column;align-items:stretch;}
+  #habitNameInput{width:100%;}
+  footer{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<div id="loadingOverlay">
+  <div id="loadingText">Loading your data…</div>
+  <div id="syncGate" class="auth-card" style="display:none">
+    <div class="auth-logo">🌿</div>
+
+    <!-- Landing: pick Log in / Create account / Forgot password -->
+    <div id="gateLanding" style="display:flex;flex-direction:column;gap:10px;width:100%;">
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;text-align:center;">Welcome</div>
+      <div style="font-size:12px;color:#9B9A93;text-align:center;margin-bottom:4px;">Choose an option to continue</div>
+      <button type="button" id="landingLoginBtn" class="gate-landing-btn gate-landing-btn-primary">Log in</button>
+      <button type="button" id="landingSignupBtn" class="gate-landing-btn">Create account</button>
+      <button type="button" id="landingForgotBtn" class="gate-landing-btn">Forgot password?</button>
+    </div>
+
+    <!-- Form: shown after picking an option above -->
+    <div id="gateForm" style="display:none;flex-direction:column;gap:10px;width:100%;">
+      <button type="button" id="gateBackBtn">&larr; Back</button>
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#E7E6E1;" id="syncGateTitle">Log in</div>
+      <div style="font-size:12px;color:#9B9A93;text-align:center;" id="syncGateHint">Use the same username and password on every device to load the same habit history.</div>
+      <input type="text" id="syncUserInput" placeholder="Username" autocomplete="username" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="text" id="syncFriendInput" placeholder="A friend's name (for recovery)" autocomplete="off" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="password" id="syncPassInput" placeholder="Password" autocomplete="current-password" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <input type="password" id="syncPassConfirmInput" placeholder="Confirm password" autocomplete="new-password" style="display:none;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;letter-spacing:.3px;background:#232429;color:#F7F6F2;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 13px;width:100%;">
+      <button type="button" id="syncGateBtn" style="font-family:'Sora',sans-serif;font-weight:700;font-size:13px;background:linear-gradient(135deg,#6E8B7A,#7C93AA);color:#15161A;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;width:100%;">Log in</button>
+      <div id="syncGateStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9B9A93;min-height:14px;"></div>
+    </div>
+  </div>
+</div>
+<div id="app" style="display:none">
+
+  <div class="masthead">
+    <button id="profileBtn" type="button" class="profile-btn" title="Account" aria-label="Account">👤</button>
+    <div id="profileModal" class="modal-overlay" style="display:none">
+      <div class="modal-card">
+        <button type="button" class="modal-x" id="profileModalClose" aria-label="Close">✕</button>
+
+        <div id="profileMenuPanel">
+          <div class="modal-icon">👤</div>
+          <div class="modal-title">Account</div>
+          <button type="button" class="modal-menu-btn" id="openChangeAccountBtn">🔑 Change account password</button>
+          <button type="button" class="modal-menu-btn" id="openChangeSecretBtn">🔒 Change secret habits password</button>
+          <button type="button" class="modal-menu-btn danger" id="modalLogoutBtn">🚪 Log out</button>
+        </div>
+
+        <div id="changeAccountPanel" style="display:none">
+          <div class="modal-icon">🔑</div>
+          <div class="modal-title">Change account password</div>
+          <p class="modal-hint">Enter either your current password <em>or</em> your friend's name — just one of the two.</p>
+          <div class="modal-field" id="caOldPassField">
+            <label class="modal-field-label" for="caOldPassInput">Current password</label>
+            <input type="password" id="caOldPassInput" placeholder="Enter current password" class="modal-input" autocomplete="current-password">
+          </div>
+          <div class="modal-or-divider"><span>or</span></div>
+          <div class="modal-field" id="caFriendField">
+            <label class="modal-field-label" for="caFriendInput">Friend's name</label>
+            <input type="text" id="caFriendInput" placeholder="Enter friend's name" class="modal-input" autocomplete="off">
+          </div>
+          <div class="modal-field">
+            <label class="modal-field-label" for="caNewPassInput">New password</label>
+            <input type="password" id="caNewPassInput" placeholder="Create new password" class="modal-input" autocomplete="new-password">
+          </div>
+          <div class="modal-field">
+            <label class="modal-field-label" for="caNewPassConfirmInput">Confirm new password</label>
+            <input type="password" id="caNewPassConfirmInput" placeholder="Re-enter new password" class="modal-input" autocomplete="new-password">
+          </div>
+          <button type="button" class="modal-submit-btn" id="caSubmitBtn">Change password</button>
+          <div class="modal-status" id="caStatus"></div>
+          <button type="button" class="modal-back-btn" id="caBackBtn">← Back</button>
+        </div>
+
+        <div id="changeSecretPanel" style="display:none">
+          <div class="modal-icon">🔒</div>
+          <div class="modal-title">Change secret habits password</div>
+          <p class="modal-hint" id="csHint">Enter your current secret-habits password, then set a new one.</p>
+          <div class="modal-field">
+            <label class="modal-field-label" for="csOldPassInput">Current secret password</label>
+            <input type="password" id="csOldPassInput" placeholder="Enter current password" class="modal-input" autocomplete="off">
+          </div>
+          <div class="modal-field">
+            <label class="modal-field-label" for="csNewPassInput">New password</label>
+            <input type="password" id="csNewPassInput" placeholder="Create new password" class="modal-input" autocomplete="off">
+          </div>
+          <div class="modal-field">
+            <label class="modal-field-label" for="csNewPassConfirmInput">Confirm new password</label>
+            <input type="password" id="csNewPassConfirmInput" placeholder="Re-enter new password" class="modal-input" autocomplete="off">
+          </div>
+          <button type="button" class="modal-submit-btn" id="csSubmitBtn">Change password</button>
+          <div class="modal-status" id="csStatus"></div>
+          <button type="button" class="modal-back-btn" id="csBackBtn">← Back</button>
+        </div>
+      </div>
+    </div>
+    <div class="title-block">
+      <div class="eyebrow">HabitGame · Console</div>
+      <h1>Habit Tracker</h1>
+      <div class="level-badge">
+        <span class="lv-circle" id="lvCircle">L1</span>
+        <span class="lv-text">Level <b id="lvNum">1</b> · <span id="lvNext">0% to next</span></span>
+      </div>
+    </div>
+    <div class="masthead-right">
+      <div class="controls-row">
+        <select id="yearSelect"></select>
+        <select id="monthSelect"></select>
+        <button id="exportBtn" onclick="exportPDF()">📄 Export PDF</button>
+      </div>
+      <div class="export-status" id="exportStatus"></div>
+      <div class="save-status" id="saveStatus"></div>
+      <div class="save-status" id="lastSyncedStatus"></div>
+      <div class="save-status" id="backupStatus"></div>
+    </div>
+  </div>
+
+  <!-- 1. Daily Progress: stats only -->
+  <div class="section" id="sec-dailychart">
+    <div class="section-head"><h2>Daily Progress</h2><span class="tag" id="dailyTag"></span></div>
+    <div class="stats-wrap">
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#A57C82,#B08968)"><div class="label">Goal</div><div class="value" id="dayGoal">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#B08968,#7C93AA)"><div class="label">Completed</div><div class="value" id="dayCompleted">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#7C93AA,#6E8B7A)"><div class="label">Left</div><div class="value" id="dayLeft">–</div></div>
+      <div class="donut-card">
+        <canvas id="dayDonutChart" width="100" height="100"></canvas>
+        <div class="donut-label"><span class="big" id="dayDonutPct">–</span>Completion Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. My Habits -->
+  <div class="section" id="sec-habits">
+    <div class="section-head"><h2>My Habits</h2><span class="tag" id="gridTag"></span></div>
+    <div class="card">
+      <div class="habit-grid-wrap">
+        <div class="habit-grid-labels" id="habitGridLabels"></div>
+        <div class="grid-scroll">
+          <div class="habit-grid" id="habitGrid"></div>
+        </div>
+      </div>
+      <div class="empty-note" id="gridEmptyNote" style="display:none">No habits yet — add one at the bottom of the page.</div>
+
+      <div class="secret-block">
+        <div class="secret-locked" id="secretLocked">
+          <button type="button" id="secretToggleBtn" class="secret-toggle-btn">🔒 Secret Habits</button>
+          <div class="secret-unlock-form" id="secretUnlockForm" style="display:none">
+            <p class="secret-hint" id="secretHint">Enter your secret-habits password.</p>
+            <div class="secret-unlock-row">
+              <input type="password" id="secretPassInput" placeholder="Password">
+              <input type="password" id="secretPassConfirmInput" placeholder="Confirm password" style="display:none">
+              <button type="button" id="secretUnlockBtn">Unlock</button>
+            </div>
+            <div class="secret-status" id="secretStatus"></div>
+          </div>
+        </div>
+        <div class="secret-unlocked" id="secretUnlockedPanel" style="display:none">
+          <div class="secret-unlocked-head">
+            <span class="secret-unlocked-title">🔓 Secret Habits</span>
+            <button type="button" id="secretLockBtn">Lock</button>
+          </div>
+          <div class="habit-grid-wrap">
+            <div class="habit-grid-labels" id="secretGridLabels"></div>
+            <div class="grid-scroll">
+              <div class="habit-grid" id="secretGrid"></div>
+            </div>
+          </div>
+          <div class="empty-note" id="secretEmptyNote" style="display:none">No secret habits yet — check "🔒 Secret" when adding a habit below.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2b. Overall Wellness (moved right after My Habits) -->
+  <div class="section" id="sec-wellness">
+    <div class="section-head"><h2>Overall Wellness</h2><span class="tag">mood &amp; sleep</span></div>
+    <div class="card">
+      <div class="log-form">
+        <div class="log-field">
+          <label for="logDay">Day</label>
+          <input type="number" id="logDay" min="1" value="1">
+        </div>
+        <div class="log-field">
+          <label>Mood (1–5)</label>
+          <div class="mood-picker" id="moodPicker">
+            <button type="button" class="mood-btn" data-mood="1">1</button>
+            <button type="button" class="mood-btn" data-mood="2">2</button>
+            <button type="button" class="mood-btn" data-mood="3">3</button>
+            <button type="button" class="mood-btn" data-mood="4">4</button>
+            <button type="button" class="mood-btn" data-mood="5">5</button>
+          </div>
+        </div>
+        <div class="log-field">
+          <label for="logSleep">Sleep (hrs)</label>
+          <input type="number" id="logSleep" min="0" max="24" step="0.5" placeholder="7.5">
+        </div>
+        <button type="button" id="todayBtn">Today</button>
+        <button type="button" id="saveLogBtn">Save entry</button>
+      </div>
+      <div class="legend-row">
+        <span><span class="dot" style="background:var(--accent2)"></span>Mood (1–5)</span>
+        <span><span class="dot" style="background:var(--accent4)"></span>Hours of Sleep</span>
+      </div>
+      <canvas id="wellnessChart" height="120"></canvas>
+      <div class="wellness-hint" id="wellnessHint"></div>
+    </div>
+  </div>
+
+  <!-- 3. Monthly Progress: stats only -->
+  <div class="section" id="sec-monthly">
+    <div class="section-head"><h2>Monthly Progress</h2><span class="tag" id="statTag"></span></div>
+    <div class="stats-wrap">
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#6E8B7A,#7C93AA)"><div class="label">Goal</div><div class="value" id="statGoal">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#7C93AA,#B08968)"><div class="label">Completed</div><div class="value" id="statCompleted">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#A57C82,#B08968)"><div class="label">Left</div><div class="value" id="statLeft">–</div></div>
+      <div class="donut-card">
+        <canvas id="donutChart" width="100" height="100"></canvas>
+        <div class="donut-label"><span class="big" id="donutPct">–</span>Completion Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Monthly bar graph (daily completion trend for the month) -->
+  <div class="section" id="sec-dailychart-graph">
+    <div class="section-head"><h2>Monthly Bar Graph</h2><span class="tag" id="dailyGraphTag"></span></div>
+    <div class="card chart-box"><canvas id="dailyChart" height="150"></canvas></div>
+  </div>
+
+  <!-- 5. Yearly Progress: stats only -->
+  <div class="section" id="sec-yearly">
+    <div class="section-head"><h2>Yearly Progress</h2><span class="tag" id="yearTag"></span></div>
+    <div class="stats-wrap">
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#6E8B7A,#7C93AA)"><div class="label">Year Goal</div><div class="value" id="yearGoal">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#7C93AA,#B08968)"><div class="label">Year Completed</div><div class="value" id="yearCompleted">–</div></div>
+      <div class="stat-card" style="--accent-grad:linear-gradient(135deg,#A57C82,#B08968)"><div class="label">Year Left</div><div class="value" id="yearLeft">–</div></div>
+      <div class="donut-card">
+        <canvas id="yearDonutChart" width="100" height="100"></canvas>
+        <div class="donut-label"><span class="big" id="yearDonutPct">–</span>Completion Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Yearly bar graph -->
+  <div class="section" id="sec-yearlychart-graph">
+    <div class="section-head"><h2>Yearly Bar Graph</h2><span class="tag" id="yearGraphTag"></span></div>
+    <div class="card chart-box"><canvas id="yearlyChart" height="150"></canvas></div>
+  </div>
+
+  <!-- 7. Monthly Habit Breakdown -->
+  <div class="section" id="sec-monthly-table">
+    <div class="section-head"><h2>Monthly Habit Breakdown</h2><span class="tag" id="statTableTag"></span></div>
+    <div class="card mini-table-wrap">
+      <table class="mini-table">
+        <thead><tr><th>Habit</th><th class="num">Goal</th><th class="num">Completed</th><th class="num">Left</th><th class="num">Rate</th></tr></thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 8. Yearly Breakdown (per-month table) -->
+  <div class="section" id="sec-yearly-table">
+    <div class="section-head"><h2>Yearly Breakdown</h2><span class="tag" id="yearTableTag"></span></div>
+    <div class="card mini-table-wrap">
+      <table class="mini-table">
+        <thead><tr><th>Month</th><th class="num">Goal</th><th class="num">Completed</th><th class="num">Left</th><th class="num">Rate</th></tr></thead>
+        <tbody id="yearlyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 10. Manage Habits (last) -->
+  <div class="section" id="sec-manage">
+    <div class="section-head"><h2>Manage Habits</h2><span class="tag">add or remove</span></div>
+    <div class="card manage-card">
+      <div class="add-habit-form">
+        <div class="log-field">
+          <label for="habitIconInput">Icon</label>
+          <input type="text" id="habitIconInput" value="✅" maxlength="4">
+        </div>
+        <div class="log-field" style="flex:1;min-width:160px;">
+          <label for="habitNameInput">Habit name</label>
+          <input type="text" id="habitNameInput" placeholder="e.g. Stretch for 10 min">
+        </div>
+        <div class="log-field secret-checkbox-field">
+          <label for="habitSecretInput">🔒 Secret</label>
+          <input type="checkbox" id="habitSecretInput">
+        </div>
+        <button type="button" id="addHabitBtn">+ Add habit</button>
+      </div>
+      <ul class="manage-list" id="manageList"></ul>
+    </div>
+  </div>
+
+  <footer>
+    <span>HabitGame — Console</span>
+    <span id="footerTime"></span>
+  </footer>
+</div>
+
+<div id="pdfCover"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const WEEKDAY_LETTERS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DEFAULT_HABITS = [
+  {id:'h1', name:"Wake Up at 05:00",   icon:"⏰"},
+  {id:'h2', name:"Gym",                icon:"💪"},
+  {id:'h3', name:"Reading / Learning", icon:"📖"},
+  {id:'h4', name:"Day Planning",       icon:"🗓️"},
+  {id:'h5', name:"Project Work",       icon:"🎯"},
+  {id:'h6', name:"No Alcohol",         icon:"🚫"},
+  {id:'h7', name:"Meditate",           icon:"🧘"},
+  {id:'h8', name:"Healthy Meals",      icon:"🥗"},
+];
+
+/* ============ Storage: Supabase (cross-device sync) ============ */
+const SUPABASE_URL = 'https://krodsuulmkndyotvfywu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Afo1vk5FJnRX9Bb3_y1beQ_tcEuG_uU';
+const SUPABASE_TABLE = 'habit_tracker_data';
+
+let syncCode = null;
+
+/* Local, device-only cache — used to remember which account this device
+   last logged into, so the person isn't asked to log in on every visit.
+   Uses the browser's own localStorage (this page runs on GitHub Pages,
+   not inside a Claude artifact, so window.storage isn't available there
+   — that mismatch was why the login was never actually "remembered"). */
+const LS_PREFIX = 'habitTracker_';
+const hasLocalStorage = (function(){
+  try{ return typeof window.localStorage !== 'undefined'; }catch(e){ return false; }
+})();
+async function localGet(key){
+  if(!hasLocalStorage) return null;
+  try{ const v = window.localStorage.getItem(LS_PREFIX+key); return v===null || v==='' ? null : v; }catch(e){ return null; }
+}
+async function localSet(key, value){
+  if(!hasLocalStorage) return false;
+  try{ window.localStorage.setItem(LS_PREFIX+key, value); return true; }catch(e){ return false; }
+}
+async function localRemove(key){
+  if(!hasLocalStorage) return false;
+  try{ window.localStorage.removeItem(LS_PREFIX+key); return true; }catch(e){ return false; }
+}
+
+async function supaFetch(path, options={}){
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers:{
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers||{})
+    }
+  });
+}
+
+/* Auth values (account password, friend-name recovery, secret-habits
+   password) live in the `users` table, one row per username, instead of
+   inside habit_tracker_data. These three keys are the only ones routed
+   there — everything else (habits, completions, mood, sleep) stays in
+   habit_tracker_data as before. */
+const AUTH_KEY_TO_COLUMN = {
+  '__password_hash': 'password_hash',
+  '__friend_name_hash': 'friend_name_hash',
+  '__secret_password_hash': 'secret_password_hash'
+};
+async function userFieldGet(column){
+  try{
+    const res = await supaFetch(`users?username=eq.${encodeURIComponent(syncCode)}&select=${column}`);
+    if(!res.ok) return null;
+    const rows = await res.json();
+    return rows.length ? (rows[0][column] ?? null) : null;
+  }catch(e){ console.error(e); return null; }
+}
+async function userFieldSet(column, value){
+  try{
+    const res = await supaFetch(`users?on_conflict=username`, {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ username: syncCode, [column]: value, updated_at: new Date().toISOString() }])
+    });
+    return res.ok;
+  }catch(e){ console.error(e); return false; }
+}
+
+/* Every read/write of actual app data (habits, completions, mood, sleep)
+   goes through these three functions, keyed by the person's sync code. */
+async function storageGet(key){
+  if(!syncCode) return null;
+  if(key in AUTH_KEY_TO_COLUMN) return userFieldGet(AUTH_KEY_TO_COLUMN[key]);
+  try{
+    const res = await supaFetch(`${SUPABASE_TABLE}?sync_code=eq.${encodeURIComponent(syncCode)}&storage_key=eq.${encodeURIComponent(key)}&select=value`);
+    if(!res.ok) return null;
+    const rows = await res.json();
+    return rows.length ? rows[0].value : null;
+  }catch(e){ console.error(e); return null; }
+}
+async function storageSet(key, value){
+  if(!syncCode) return false;
+  if(key in AUTH_KEY_TO_COLUMN) return userFieldSet(AUTH_KEY_TO_COLUMN[key], value);
+  try{
+    const res = await supaFetch(SUPABASE_TABLE, {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ sync_code: syncCode, storage_key: key, value, updated_at: new Date().toISOString() }])
+    });
+    return res.ok;
+  }catch(e){ console.error(e); return false; }
+}
+async function storageListKeys(prefix){
+  if(!syncCode) return [];
+  try{
+    const res = await supaFetch(`${SUPABASE_TABLE}?sync_code=eq.${encodeURIComponent(syncCode)}&storage_key=like.${encodeURIComponent(prefix)}*&select=storage_key`);
+    if(!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(r=>r.storage_key);
+  }catch(e){ console.error(e); return []; }
+}
+
+/* ============ State ============ */
+const today = new Date();
+let habits = [];
+let state = { year: today.getFullYear(), month: today.getMonth(), completions: {}, mood: [], sleep: [], nd: 30 };
+
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+function weekdayOf(y,m,d){ return new Date(y,m,d).getDay(); }
+function monthKey(y,m){ return `month-${y}-${m}`; }
+
+function blankMonthData(y,m){
+  const nd = daysInMonth(y,m);
+  return { completions:{}, mood:new Array(nd).fill(null), sleep:new Array(nd).fill(null), nd };
+}
+
+async function loadHabits(){
+  const raw = await storageGet('habits');
+  if(raw){
+    try{ return JSON.parse(raw); }catch(e){ /* fall through */ }
+  }
+  await storageSet('habits', JSON.stringify(DEFAULT_HABITS));
+  return DEFAULT_HABITS.slice();
+}
+async function saveHabits(){
+  await storageSet('habits', JSON.stringify(habits));
+}
+
+async function loadMonthData(y,m){
+  const nd = daysInMonth(y,m);
+  const raw = await storageGet(monthKey(y,m));
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      return {
+        completions: parsed.completions || {},
+        mood: (parsed.mood && parsed.mood.length===nd) ? parsed.mood : new Array(nd).fill(null),
+        sleep: (parsed.sleep && parsed.sleep.length===nd) ? parsed.sleep : new Array(nd).fill(null),
+        nd
+      };
+    }catch(e){ /* fall through */ }
+  }
+  return blankMonthData(y,m);
+}
+let saveTimer=null;
+let pendingSaveKey=null;
+let pendingSavePayload=null;
+function formatSyncedTime(d){
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function updateLastSynced(){
+  const el = document.getElementById('lastSyncedStatus');
+  if(!el) return;
+  el.textContent = 'Last synced ' + formatSyncedTime(new Date());
+}
+function saveMonthData(immediate){
+  const status = document.getElementById('saveStatus');
+  status.textContent = 'Saving…';
+  pendingSaveKey = monthKey(state.year, state.month);
+  pendingSavePayload = JSON.stringify({
+    completions: state.completions, mood: state.mood, sleep: state.sleep
+  });
+  clearTimeout(saveTimer);
+  const doSave = async ()=>{
+    const key = pendingSaveKey, payload = pendingSavePayload;
+    pendingSaveKey = null; pendingSavePayload = null;
+    const ok = await storageSet(key, payload);
+    status.textContent = syncCode ? (ok ? 'Saved ✓' : 'Save failed') : 'No sync code set';
+    if(ok) updateLastSynced();
+    setTimeout(()=>{ if(status.textContent!=='No sync code set') status.textContent=''; }, 2000);
+  };
+  if(immediate){
+    doSave();
+  } else {
+    saveTimer = setTimeout(doSave, 250);
+  }
+}
+/* Flush any pending (debounced) save the instant the tab/app is backgrounded
+   or closed — a setTimeout scheduled for later never fires if the phone/tab
+   closes first, which is why ticks made right before closing were lost. */
+function flushPendingSave(){
+  if(pendingSaveKey===null) return;
+  clearTimeout(saveTimer);
+  const key = pendingSaveKey, payload = pendingSavePayload;
+  pendingSaveKey = null; pendingSavePayload = null;
+  storageSet(key, payload);
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) flushPendingSave();
+});
+window.addEventListener('pagehide', flushPendingSave);
+window.addEventListener('blur', flushPendingSave);
+
+/* ============ Selects ============ */
+const yearSelect = document.getElementById('yearSelect');
+const monthSelect = document.getElementById('monthSelect');
+const baseYear = today.getFullYear();
+[baseYear-1, baseYear, baseYear+1].forEach(y=>{
+  const o=document.createElement('option'); o.value=y; o.textContent=y;
+  yearSelect.appendChild(o);
+});
+MONTH_NAMES.forEach((m,i)=>{
+  const o=document.createElement('option'); o.value=i; o.textContent=m;
+  monthSelect.appendChild(o);
+});
+yearSelect.value = state.year;
+monthSelect.value = state.month;
+yearSelect.addEventListener('change', ()=>{ state.year=+yearSelect.value; loadMonth(); });
+monthSelect.addEventListener('change', ()=>{ state.month=+monthSelect.value; loadMonth(); });
+
+async function loadMonth(){
+  flushPendingSave();
+  const data = await loadMonthData(state.year, state.month);
+  state.completions = data.completions;
+  state.mood = data.mood;
+  state.sleep = data.sleep;
+  state.nd = data.nd;
+  renderGrid();
+  renderSecretGrid();
+  renderDailyStats();
+  renderMonthly();
+  renderDailyChart();
+  renderWellness();
+  await renderYearly();
+  syncLogFormToDay();
+}
+
+/* ============ Secret habits helpers ============ */
+let secretUnlocked = false;
+function visibleHabits(){ return habits.filter(h=>!h.secret); }
+function secretHabitsList(){ return habits.filter(h=>h.secret); }
+
+/* ============ Stats ============ */
+function computeStats(){
+  const nd = state.nd;
+  const vh = visibleHabits();
+  const goal = vh.length * nd;
+  let completed = 0;
+  const perHabit = vh.map(h=>{
+    let c=0;
+    for(let d=1; d<=nd; d++) if(state.completions[`${h.id}-${d}`]) c++;
+    completed += c;
+    return c;
+  });
+  const left = goal - completed;
+  const rate = goal>0 ? Math.round((completed/goal)*100) : 0;
+  return {goal, completed, left, rate, perHabit, nd};
+}
+
+function getActiveDailyDay(){
+  if(state.year===today.getFullYear() && state.month===today.getMonth()){
+    return Math.min(today.getDate(), state.nd);
+  }
+  return 1;
+}
+function computeDayStats(day){
+  const vh = visibleHabits();
+  const goal = vh.length;
+  let completed = 0;
+  vh.forEach(h=>{ if(state.completions[`${h.id}-${day}`]) completed++; });
+  const left = goal - completed;
+  const rate = goal>0 ? Math.round((completed/goal)*100) : 0;
+  return {goal, completed, left, rate};
+}
+
+/* ============ Shared grid markup builder (used by main + secret grids) ============ */
+function buildGridMarkup(list, nd){
+  let labelHtml = '';
+  labelHtml += `<div class="grid-head-label"></div>`;
+  labelHtml += `<div class="grid-head-label" style="border-top:1px solid var(--line)"></div>`;
+  list.forEach(h=>{
+    labelHtml += `<div class="grid-row-label"><span class="ic">${h.icon}</span>${h.name}</div>`;
+  });
+
+  let cellHtml = '';
+  for(let d=1; d<=nd; d++){
+    const wd = weekdayOf(state.year, state.month, d);
+    const isToday = (state.year===today.getFullYear() && state.month===today.getMonth() && d===today.getDate());
+    cellHtml += `<div class="grid-day-head ${wd===0?'weekstart':''} ${isToday?'today':''}"><span class="wd">${WEEKDAY_LETTERS[wd]}</span></div>`;
+  }
+  for(let d=1; d<=nd; d++){
+    const wd = weekdayOf(state.year, state.month, d);
+    const isToday = (state.year===today.getFullYear() && state.month===today.getMonth() && d===today.getDate());
+    cellHtml += `<div class="grid-day-head ${wd===0?'weekstart':''} ${isToday?'today':''}" style="border-top:1px solid var(--line)">${d}</div>`;
+  }
+  list.forEach(h=>{
+    for(let d=1; d<=nd; d++){
+      const wd = weekdayOf(state.year, state.month, d);
+      const done = !!state.completions[`${h.id}-${d}`];
+      cellHtml += `<div class="grid-cell ${wd===0?'weekstart':''} ${done?'done':''}" data-h="${h.id}" data-d="${d}"></div>`;
+    }
+  });
+  return {labelHtml, cellHtml};
+}
+
+function attachGridCellHandlers(gridEl, isSecretGrid){
+  gridEl.querySelectorAll('.grid-cell').forEach(cell=>{
+    cell.addEventListener('click', ()=>{
+      const hid = cell.dataset.h, d = +cell.dataset.d;
+      const key = `${hid}-${d}`;
+      state.completions[key] = !state.completions[key];
+      cell.classList.toggle('done', state.completions[key]);
+      cell.classList.remove('pulse'); void cell.offsetWidth; cell.classList.add('pulse');
+      if(!isSecretGrid){
+        renderDailyStats();
+        renderMonthly();
+        renderDailyChart();
+        renderYearly();
+      }
+      saveMonthData(true);
+    });
+  });
+}
+
+/* ============ Render grid (My Habits) ============ */
+function renderGrid(){
+  const grid = document.getElementById('habitGrid');
+  const labelsCol = document.getElementById('habitGridLabels');
+  const emptyNote = document.getElementById('gridEmptyNote');
+  const nd = state.nd;
+  const vh = visibleHabits();
+  document.getElementById('gridTag').textContent = `${MONTH_NAMES[state.month]} ${state.year} · ${vh.length} habits`;
+
+  if(vh.length===0){
+    grid.innerHTML=''; grid.style.gridTemplateColumns=''; labelsCol.innerHTML='';
+    emptyNote.style.display='block';
+    return;
+  }
+  emptyNote.style.display='none';
+
+  grid.style.gridTemplateColumns = `repeat(${nd}, 30px)`;
+  const {labelHtml, cellHtml} = buildGridMarkup(vh, nd);
+  labelsCol.innerHTML = labelHtml;
+  grid.innerHTML = cellHtml;
+  attachGridCellHandlers(grid, false);
+}
+
+/* ============ Render grid (Secret Habits) ============ */
+function renderSecretGrid(){
+  const grid = document.getElementById('secretGrid');
+  const labelsCol = document.getElementById('secretGridLabels');
+  const emptyNote = document.getElementById('secretEmptyNote');
+  const nd = state.nd;
+  const sh = secretHabitsList();
+
+  if(sh.length===0){
+    grid.innerHTML=''; grid.style.gridTemplateColumns=''; labelsCol.innerHTML='';
+    emptyNote.style.display='block';
+    return;
+  }
+  emptyNote.style.display='none';
+
+  grid.style.gridTemplateColumns = `repeat(${nd}, 30px)`;
+  const {labelHtml, cellHtml} = buildGridMarkup(sh, nd);
+  labelsCol.innerHTML = labelHtml;
+  grid.innerHTML = cellHtml;
+  attachGridCellHandlers(grid, true);
+}
+
+/* ============ Secret habits unlock gate ============ */
+document.getElementById('secretToggleBtn').addEventListener('click', async ()=>{
+  const form = document.getElementById('secretUnlockForm');
+  const isOpen = form.style.display !== 'none';
+  if(isOpen){ form.style.display='none'; return; }
+  const existing = await storageGet('__secret_password_hash');
+  const hasPassword = existing !== null;
+  document.getElementById('secretPassConfirmInput').style.display = hasPassword ? 'none' : 'block';
+  document.getElementById('secretUnlockBtn').textContent = hasPassword ? 'Unlock' : 'Set password & unlock';
+  document.getElementById('secretHint').textContent = hasPassword
+    ? 'Enter your secret-habits password.'
+    : "Create a password to protect secret habits. There's no way to recover it if you forget it.";
+  document.getElementById('secretStatus').textContent = '';
+  document.getElementById('secretPassInput').value = '';
+  document.getElementById('secretPassConfirmInput').value = '';
+  form.style.display = 'block';
+  document.getElementById('secretPassInput').focus();
+});
+
+async function submitSecretUnlock(){
+  const pw = document.getElementById('secretPassInput').value;
+  const confirmPw = document.getElementById('secretPassConfirmInput').value;
+  const statusEl = document.getElementById('secretStatus');
+  if(!pw){ statusEl.textContent = 'Enter a password'; return; }
+  const existing = await storageGet('__secret_password_hash');
+  if(existing===null){
+    if(pw.length<4){ statusEl.textContent = 'Password must be at least 4 characters'; return; }
+    if(pw!==confirmPw){ statusEl.textContent = "Passwords don't match"; return; }
+    statusEl.textContent = 'Saving…';
+    const hash = await hashPassword(pw);
+    const ok = await storageSet('__secret_password_hash', hash);
+    if(!ok){ statusEl.textContent = 'Could not reach the server — try again'; return; }
+    unlockSecretHabits();
+  } else {
+    statusEl.textContent = 'Checking…';
+    const hash = await hashPassword(pw);
+    if(hash!==existing){ statusEl.textContent = 'Incorrect password'; return; }
+    unlockSecretHabits();
+  }
+}
+document.getElementById('secretUnlockBtn').addEventListener('click', submitSecretUnlock);
+document.getElementById('secretPassInput').addEventListener('keydown', e=>{ if(e.key==='Enter') submitSecretUnlock(); });
+document.getElementById('secretPassConfirmInput').addEventListener('keydown', e=>{ if(e.key==='Enter') submitSecretUnlock(); });
+
+function unlockSecretHabits(){
+  secretUnlocked = true;
+  document.getElementById('secretPassInput').value = '';
+  document.getElementById('secretPassConfirmInput').value = '';
+  document.getElementById('secretStatus').textContent = '';
+  document.getElementById('secretUnlockForm').style.display = 'none';
+  document.getElementById('secretLocked').style.display = 'none';
+  document.getElementById('secretUnlockedPanel').style.display = 'block';
+  renderSecretGrid();
+  renderManageList();
+}
+function lockSecretHabits(){
+  secretUnlocked = false;
+  document.getElementById('secretUnlockedPanel').style.display = 'none';
+  document.getElementById('secretLocked').style.display = 'block';
+  renderManageList();
+}
+document.getElementById('secretLockBtn').addEventListener('click', lockSecretHabits);
+
+/* ============ Daily stats + Monthly bar graph ============ */
+let dayDonutChart=null;
+function renderDailyStats(){
+  const day = getActiveDailyDay();
+  const s = computeDayStats(day);
+  document.getElementById('dailyTag').textContent = `Day ${day} · ${MONTH_NAMES[state.month]} ${state.year}`;
+  document.getElementById('dayGoal').textContent = s.goal;
+  document.getElementById('dayCompleted').textContent = s.completed;
+  document.getElementById('dayLeft').textContent = s.left;
+  document.getElementById('dayDonutPct').textContent = s.rate+'%';
+
+  if(dayDonutChart) dayDonutChart.destroy();
+  dayDonutChart = new Chart(document.getElementById('dayDonutChart'), {
+    type:'doughnut',
+    data:{ datasets:[{ data:[s.rate, 100-s.rate], backgroundColor:['#A57C82','rgba(255,255,255,0.05)'], borderWidth:0 }] },
+    options:{ cutout:'72%', plugins:{legend:{display:false},tooltip:{enabled:false}} }
+  });
+}
+
+let dailyChart=null;
+function renderDailyChart(){
+  const nd = state.nd;
+  const vh = visibleHabits();
+  document.getElementById('dailyGraphTag').textContent = `${MONTH_NAMES[state.month]} ${state.year} · daily completion`;
+  const dailyLabels = Array.from({length:nd}, (_,i)=>i+1);
+  const dailyPct = dailyLabels.map(d=>{
+    if(vh.length===0) return 0;
+    let c=0; vh.forEach(h=>{ if(state.completions[`${h.id}-${d}`]) c++; });
+    return Math.round((c/vh.length)*100);
+  });
+  if(dailyChart) dailyChart.destroy();
+  dailyChart = new Chart(document.getElementById('dailyChart'), {
+    type:'bar',
+    data:{ labels: dailyLabels, datasets:[{
+      data: dailyPct,
+      backgroundColor: dailyPct.map(v=> v>=70 ? '#6E8B7A' : v>=40 ? '#7C93AA' : '#A57C82'),
+      borderRadius:4, maxBarThickness:16,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#9B9A93',font:{family:'JetBrains Mono',size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        x:{ticks:{color:'#9B9A93',font:{family:'JetBrains Mono',size:9},maxTicksLimit:12},grid:{display:false}}
+      }
+    }
+  });
+}
+
+/* ============ Monthly progress (stats) + Monthly Habit Breakdown table ============ */
+let donutChart=null;
+function renderMonthly(){
+  const s = computeStats();
+  const vh = visibleHabits();
+  document.getElementById('statTag').textContent = `${MONTH_NAMES[state.month]} ${state.year} · ${vh.length} habits`;
+  document.getElementById('statTableTag').textContent = `${MONTH_NAMES[state.month]} ${state.year} · per-habit`;
+  document.getElementById('statGoal').textContent = s.goal;
+  document.getElementById('statCompleted').textContent = s.completed;
+  document.getElementById('statLeft').textContent = s.left;
+  document.getElementById('donutPct').textContent = s.rate+'%';
+
+  const level = 1 + Math.floor(s.rate/10);
+  document.getElementById('lvCircle').textContent = 'L'+level;
+  document.getElementById('lvNum').textContent = level;
+  const toNext = 10 - (s.rate % 10);
+  document.getElementById('lvNext').textContent = s.rate>=100 ? 'Max level' : `${toNext}% to next`;
+
+  if(donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type:'doughnut',
+    data:{ datasets:[{ data:[s.rate, 100-s.rate], backgroundColor:['#6E8B7A','rgba(255,255,255,0.05)'], borderWidth:0 }] },
+    options:{ cutout:'72%', plugins:{legend:{display:false},tooltip:{enabled:false}} }
+  });
+
+  renderMonthlyTable(s);
+}
+
+function renderMonthlyTable(s){
+  const tbody = document.getElementById('monthlyTableBody');
+  const vh = visibleHabits();
+  if(vh.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-faint);">No habits yet — add one below.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = vh.map((h,i)=>{
+    const c = s.perHabit[i];
+    const left = s.nd - c;
+    const rate = s.nd>0 ? Math.round((c/s.nd)*100) : 0;
+    return `<tr>
+      <td><span class="name-cell"><span class="ic">${h.icon}</span>${h.name}</span></td>
+      <td class="num">${s.nd}</td>
+      <td class="num">${c}</td>
+      <td class="num">${left}</td>
+      <td class="num"><span class="rate-pill">${rate}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============ Yearly progress (stats) + Yearly bar graph + per-month table ============ */
+let yearlyChart=null, yearDonutChart=null;
+async function renderYearly(){
+  const vh = visibleHabits();
+  document.getElementById('yearTag').textContent = `${state.year} · ${vh.length} habits`;
+  document.getElementById('yearGraphTag').textContent = `${state.year} · per-month`;
+  document.getElementById('yearTableTag').textContent = `${state.year} · per-month`;
+  let yearGoal=0, yearCompleted=0;
+  const monthlyRates=[];
+  const monthRows=[];
+  // Fetch all months in parallel instead of one-at-a-time — cuts load time
+  // from ~12 sequential round-trips down to the time of a single round-trip.
+  const monthDataList = await Promise.all(
+    Array.from({length:12}, (_,m)=>
+      m===state.month
+        ? Promise.resolve({ completions: state.completions, nd: state.nd })
+        : loadMonthData(state.year, m)
+    )
+  );
+  for(let m=0; m<12; m++){
+    const data = monthDataList[m];
+    const nd = data.nd;
+    const goal = vh.length * nd;
+    let completed = 0;
+    vh.forEach(h=>{
+      for(let d=1; d<=nd; d++) if(data.completions[`${h.id}-${d}`]) completed++;
+    });
+    yearGoal += goal; yearCompleted += completed;
+    const rate = goal>0 ? Math.round((completed/goal)*100) : 0;
+    monthlyRates.push(rate);
+    monthRows.push({ month:m, goal, completed, left: goal-completed, rate });
+  }
+  const yearLeft = yearGoal - yearCompleted;
+  const yearRate = yearGoal>0 ? Math.round((yearCompleted/yearGoal)*100) : 0;
+
+  document.getElementById('yearGoal').textContent = yearGoal;
+  document.getElementById('yearCompleted').textContent = yearCompleted;
+  document.getElementById('yearLeft').textContent = yearLeft;
+  document.getElementById('yearDonutPct').textContent = yearRate+'%';
+
+  if(yearDonutChart) yearDonutChart.destroy();
+  yearDonutChart = new Chart(document.getElementById('yearDonutChart'), {
+    type:'doughnut',
+    data:{ datasets:[{ data:[yearRate, 100-yearRate], backgroundColor:['#7C93AA','rgba(255,255,255,0.05)'], borderWidth:0 }] },
+    options:{ cutout:'72%', plugins:{legend:{display:false},tooltip:{enabled:false}} }
+  });
+
+  if(yearlyChart) yearlyChart.destroy();
+  yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+    type:'bar',
+    data:{ labels: MONTH_NAMES.map(m=>m.slice(0,3)), datasets:[{
+      data: monthlyRates,
+      backgroundColor: monthlyRates.map((v,i)=> i===state.month ? '#6E8B7A' : 'rgba(124,147,170,0.55)'),
+      borderRadius:5, maxBarThickness:34,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#9B9A93',font:{family:'JetBrains Mono',size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        x:{ticks:{color:'#9B9A93',font:{family:'JetBrains Mono',size:10}},grid:{display:false}}
+      }
+    }
+  });
+
+  const yTbody = document.getElementById('yearlyTableBody');
+  if(habits.length===0){
+    yTbody.innerHTML = `<tr><td colspan="5" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-faint);">No habits yet — add one below.</td></tr>`;
+  } else {
+    yTbody.innerHTML = monthRows.map(r=>`
+      <tr class="${r.month===state.month?'current-row':''}">
+        <td><span class="name-cell">${MONTH_NAMES[r.month]}</span></td>
+        <td class="num">${r.goal}</td>
+        <td class="num">${r.completed}</td>
+        <td class="num">${r.left}</td>
+        <td class="num"><span class="rate-pill">${r.rate}%</span></td>
+      </tr>
+    `).join('');
+  }
+}
+
+/* ============ Wellness ============ */
+let wellnessChart=null;
+function renderWellness(){
+  const nd = state.nd;
+  const dailyLabels = Array.from({length:nd}, (_,i)=>i+1);
+  const hasWellnessData = state.mood.some(v=>v!==null) || state.sleep.some(v=>v!==null);
+  document.getElementById('wellnessHint').textContent = hasWellnessData ? '' : 'No mood or sleep entries logged for this month yet — use the form above to add one.';
+  document.getElementById('logDay').max = nd;
+
+  if(wellnessChart) wellnessChart.destroy();
+  wellnessChart = new Chart(document.getElementById('wellnessChart'), {
+    type:'line',
+    data:{
+      labels: dailyLabels,
+      datasets:[
+        { label:'Mood', data: state.mood, borderColor:'#7C93AA', backgroundColor:'#7C93AA', yAxisID:'y', tension:.3, pointRadius:3, borderWidth:2, spanGaps:false },
+        { label:'Sleep', data: state.sleep, borderColor:'#A57C82', backgroundColor:'#A57C82', yAxisID:'y1', tension:.3, pointRadius:3, borderWidth:2, spanGaps:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{ position:'left', min:0, max:5, ticks:{color:'#9B9A93',font:{family:'JetBrains Mono',size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y1:{ position:'right', min:0, max:10, ticks:{color:'#9B9A93',font:{family:'JetBrains Mono',size:10}}, grid:{display:false} },
+        x:{ ticks:{color:'#9B9A93',font:{family:'JetBrains Mono',size:9},maxTicksLimit:12}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function syncLogFormToDay(){
+  const dayInput = document.getElementById('logDay');
+  let d = +dayInput.value || 1;
+  if(d<1) d=1; if(d>state.nd) d=state.nd;
+  dayInput.value = d;
+  const mood = state.mood[d-1];
+  document.querySelectorAll('.mood-btn').forEach(b=>{
+    b.classList.toggle('active', mood!==null && +b.dataset.mood===mood);
+  });
+  document.getElementById('logSleep').value = state.sleep[d-1]!==null ? state.sleep[d-1] : '';
+}
+document.getElementById('logDay').addEventListener('change', syncLogFormToDay);
+document.getElementById('todayBtn').addEventListener('click', ()=>{
+  if(state.year===today.getFullYear() && state.month===today.getMonth()){
+    document.getElementById('logDay').value = today.getDate();
+  } else {
+    document.getElementById('logDay').value = 1;
+  }
+  syncLogFormToDay();
+});
+document.getElementById('moodPicker').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.mood-btn');
+  if(!btn) return;
+  const nowActive = btn.classList.contains('active');
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));
+  if(!nowActive) btn.classList.add('active');
+});
+document.getElementById('saveLogBtn').addEventListener('click', ()=>{
+  const dayInput = document.getElementById('logDay');
+  let d = +dayInput.value || 1;
+  if(d<1) d=1; if(d>state.nd) d=state.nd;
+  const activeMoodBtn = document.querySelector('.mood-btn.active');
+  const mood = activeMoodBtn ? +activeMoodBtn.dataset.mood : null;
+  const sleepVal = document.getElementById('logSleep').value;
+  const sleep = sleepVal==='' ? null : Math.max(0, Math.min(24, +sleepVal));
+  state.mood[d-1] = mood;
+  state.sleep[d-1] = sleep;
+  renderWellness();
+  saveMonthData(true);
+});
+
+/* ============ Manage habits ============ */
+/* NOTE: window.confirm()/alert() are blocked inside the sandboxed artifact
+   iframe, so the old confirm() call silently did nothing and the delete
+   button appeared broken. Replaced with a two-step inline confirm instead. */
+function renderManageList(){
+  const list = document.getElementById('manageList');
+  if(habits.length===0){
+    list.innerHTML = `<li><span class="manage-name" style="color:var(--text-faint)">No habits yet — add your first one above.</span></li>`;
+    return;
+  }
+  list.innerHTML = habits.map(h=>{
+    const showSecret = h.secret && !secretUnlocked;
+    const nameMarkup = showSecret
+      ? `<span class="ic">🔒</span><span style="color:var(--text-faint)">Secret habit</span>`
+      : `<span class="ic">${h.icon}</span>${h.name}${h.secret ? ' <span class="secret-badge">🔒</span>' : ''}`;
+    return `
+    <li>
+      <span class="manage-name">${nameMarkup}</span>
+      <button type="button" class="del-btn" data-id="${h.id}" title="Delete habit">🗑</button>
+    </li>
+  `;
+  }).join('');
+  list.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!btn.classList.contains('confirming')){
+        btn.classList.add('confirming');
+        btn.textContent = 'Sure?';
+        clearTimeout(btn._confirmTimer);
+        btn._confirmTimer = setTimeout(()=>{
+          btn.classList.remove('confirming');
+          btn.textContent = '🗑';
+        }, 2500);
+        return;
+      }
+      clearTimeout(btn._confirmTimer);
+      const h = habits.find(x=>x.id===btn.dataset.id);
+      if(!h) return;
+      habits = habits.filter(x=>x.id!==btn.dataset.id);
+      await saveHabits();
+      renderManageList();
+      renderGrid();
+      renderSecretGrid();
+      renderDailyStats();
+      renderMonthly();
+      renderDailyChart();
+      await renderYearly();
+    });
+  });
+}
+document.getElementById('addHabitBtn').addEventListener('click', async ()=>{
+  const nameInput = document.getElementById('habitNameInput');
+  const iconInput = document.getElementById('habitIconInput');
+  const secretInput = document.getElementById('habitSecretInput');
+  const name = nameInput.value.trim();
+  if(!name){ nameInput.focus(); return; }
+  const icon = iconInput.value.trim() || '✅';
+  const secret = !!secretInput.checked;
+  const id = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  habits.push({id, name, icon, secret});
+  await saveHabits();
+  nameInput.value=''; iconInput.value='✅'; secretInput.checked=false;
+  renderManageList();
+  renderGrid();
+  renderSecretGrid();
+  renderDailyStats();
+  renderMonthly();
+  renderDailyChart();
+  await renderYearly();
+});
+
+/* ============ Footer time ============ */
+function formatNow(){
+  const now = new Date();
+  return now.toLocaleString(undefined, { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+document.getElementById('footerTime').textContent = 'Rendered ' + formatNow();
+
+/* ============ PDF EXPORT ============ */
+async function captureSection(el, opts={}){
+  return await html2canvas(el, { scale:2, backgroundColor:'#1B1C20', useCORS:true, ...opts });
+}
+function addCanvasToPdf(pdf, canvas, marginMM, pageW, pageH, cursorY){
+  const imgW = pageW - marginMM*2;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  let y = cursorY;
+  if (y + imgH > pageH - marginMM) { pdf.addPage(); y = marginMM; }
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', marginMM, y, imgW, imgH);
+  return y + imgH + 8;
+}
+async function exportPDF(){
+  const btn = document.getElementById('exportBtn');
+  const status = document.getElementById('exportStatus');
+  btn.disabled = true;
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+    const s = computeStats();
+
+    status.textContent = 'Building summary…';
+    const cover = document.getElementById('pdfCover');
+    const exportedAt = formatNow();
+    cover.innerHTML = `
+      <h1>Habit Tracker Report</h1>
+      <div class="cover-sub">Exported ${exportedAt}</div>
+      <div class="cover-line"><span>Month</span><b>${MONTH_NAMES[state.month]} ${state.year}</b></div>
+      <div class="cover-line"><span>Total Habits</span><b>${habits.length}</b></div>
+      <div class="cover-line"><span>Goal</span><b>${s.goal}</b></div>
+      <div class="cover-line"><span>Completed</span><b>${s.completed}</b></div>
+      <div class="cover-line"><span>Left</span><b>${s.left}</b></div>
+      <div class="cover-line"><span>Completion Rate</span><b>${s.rate}%</b></div>
+      <div style="height:22px"></div>
+      <div class="cover-check"><b>✓</b>Daily Progress</div>
+      <div class="cover-check"><b>✓</b>My Habits</div>
+      <div class="cover-check"><b>✓</b>Monthly Progress</div>
+      <div class="cover-check"><b>✓</b>Yearly Progress</div>
+      <div class="cover-check"><b>✓</b>Overall Wellness</div>
+    `;
+    let y = margin;
+    y = addCanvasToPdf(pdf, await captureSection(cover), margin, pageW, pageH, y);
+
+    const sections = [
+      {id:'sec-dailychart', label:'Capturing daily progress…', newPage:true},
+      {id:'sec-habits', label:'Capturing habits…', newPage:true, wide:true},
+      {id:'sec-monthly', label:'Capturing monthly stats…', newPage:true},
+      {id:'sec-dailychart-graph', label:'Capturing monthly bar graph…', newPage:false},
+      {id:'sec-yearly', label:'Capturing yearly stats…', newPage:true},
+      {id:'sec-yearlychart-graph', label:'Capturing yearly bar graph…', newPage:false},
+      {id:'sec-monthly-table', label:'Capturing monthly breakdown…', newPage:true},
+      {id:'sec-yearly-table', label:'Capturing yearly breakdown…', newPage:true},
+      {id:'sec-wellness', label:'Capturing wellness…', newPage:true},
+    ];
+    for(const sec of sections){
+      status.textContent = sec.label;
+      const el = document.getElementById(sec.id);
+      let canvas;
+      if(sec.wide){
+        canvas = await captureSection(el, { width: el.scrollWidth, windowWidth: el.scrollWidth });
+      } else {
+        canvas = await captureSection(el);
+      }
+      if(sec.newPage){ pdf.addPage(); y = margin; }
+      y = addCanvasToPdf(pdf, canvas, margin, pageW, pageH, y);
+    }
+
+    const pageCount = pdf.internal.getNumberOfPages();
+    for(let i=1;i<=pageCount;i++){
+      pdf.setPage(i);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(140,150,160);
+      pdf.text(`Habit Tracker Report — exported ${exportedAt}`, margin, pageH - 8);
+      pdf.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 8, {align:'right'});
+    }
+
+    status.textContent = 'Downloading…';
+    pdf.save(`habit-tracker-${MONTH_NAMES[state.month].toLowerCase()}-${state.year}.pdf`);
+    status.textContent = 'Downloaded ✓';
+    setTimeout(()=>status.textContent='', 3000);
+  }catch(err){
+    console.error(err);
+    status.textContent = 'Export failed — see console';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ============ Backup / Restore ============ */
+/* Storage here lives only on this device/artifact instance, so this lets
+   the user pull everything (habits + every month's completions/mood/sleep)
+   into one JSON file they can keep safe and re-load later, even on a
+   different device. */
+async function backupAllData(){
+  const status = document.getElementById('backupStatus');
+  if(!syncCode){ status.textContent = 'Set a sync code first'; return; }
+  status.textContent = 'Gathering data…';
+  try{
+    flushPendingSave();
+    const monthKeys = await storageListKeys('month-');
+    const months = {};
+    for(const k of monthKeys){
+      const v = await storageGet(k);
+      if(v!==null) months[k] = v;
+    }
+    // Make sure the currently open month (which may have unsaved-to-list edits) is included.
+    months[monthKey(state.year, state.month)] = JSON.stringify({
+      completions: state.completions, mood: state.mood, sleep: state.sleep
+    });
+    const backup = {
+      type: 'habit-tracker-backup',
+      exportedAt: new Date().toISOString(),
+      habits: habits,
+      months: months
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `habit-tracker-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    status.textContent = 'Backup downloaded ✓';
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  }catch(err){
+    console.error(err);
+    status.textContent = 'Backup failed — see console';
+  }
+}
+
+async function restoreFromBackup(file){
+  const status = document.getElementById('backupStatus');
+  status.textContent = 'Restoring…';
+  try{
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if(backup.type !== 'habit-tracker-backup' || !backup.months || !Array.isArray(backup.habits)){
+      status.textContent = 'That file doesn\'t look like a valid backup';
+      return;
+    }
+    for(const [key, value] of Object.entries(backup.months)){
+      await storageSet(key, value);
+    }
+    habits = backup.habits;
+    await saveHabits();
+    renderManageList();
+    await loadMonth();
+    status.textContent = 'Restored ✓';
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  }catch(err){
+    console.error(err);
+    status.textContent = 'Restore failed — invalid file';
+  }
+}
+
+/* Backup/Restore buttons removed from UI; backupAllData()/restoreFromBackup()
+   remain available in code (unused) in case they're re-added later. */
+
+/* ============ Login / account gate ============ */
+/* The username becomes the sync_code namespace in Supabase; the password is
+   never sent or stored in plain text — only its SHA-256 hash is kept, in a
+   special "__password_hash" row inside that namespace. Login and Create
+   account are separate explicit modes — a login attempt on a username with
+   no account, or a signup on a username that's taken, is rejected. */
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+let gateMode = 'login'; // 'login' | 'signup' | 'reset'
+
+async function doLogin(username, password){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash===null){
+    syncCode = null;
+    return {ok:false, msg:'No account with that username — create one instead'};
+  }
+  const hash = await hashPassword(password);
+  if(existingHash===hash) return {ok:true};
+  syncCode = null;
+  return {ok:false, msg:'Incorrect password'};
+}
+
+async function doSignup(username, password, confirm, friendName){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  if(!friendName.trim()) return {ok:false, msg:"Enter a friend's name — it's used to recover your password"};
+  if(password.length<4) return {ok:false, msg:'Password must be at least 4 characters'};
+  if(password!==confirm) return {ok:false, msg:'Passwords don\'t match'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash!==null){
+    syncCode = null;
+    return {ok:false, msg:'That username is already taken — log in instead'};
+  }
+  const hash = await hashPassword(password);
+  const friendHash = await hashPassword(friendName.trim().toLowerCase());
+  const [ok1, ok2, ok3] = await Promise.all([
+    storageSet('__password_hash', hash),
+    storageSet('__friend_name_hash', friendHash),
+    userFieldSet('friend_name', friendName.trim())
+  ]);
+  if(!ok1 || !ok2 || !ok3){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
+  return {ok:true};
+}
+
+async function doForgotPassword(username, friendName, newPassword, confirm){
+  const uname = username.trim().toLowerCase();
+  if(!uname) return {ok:false, msg:'Enter a username'};
+  if(!friendName.trim()) return {ok:false, msg:"Enter the friend's name you set when you signed up"};
+  if(newPassword.length<4) return {ok:false, msg:'New password must be at least 4 characters'};
+  if(newPassword!==confirm) return {ok:false, msg:'Passwords don\'t match'};
+  syncCode = uname;
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash===null){
+    syncCode = null;
+    return {ok:false, msg:'No account with that username'};
+  }
+  const existingFriendHash = await storageGet('__friend_name_hash');
+  const friendHash = await hashPassword(friendName.trim().toLowerCase());
+  if(existingFriendHash===null || existingFriendHash!==friendHash){
+    syncCode = null;
+    return {ok:false, msg:"That friend's name doesn't match our records"};
+  }
+  const newHash = await hashPassword(newPassword);
+  const ok = await storageSet('__password_hash', newHash);
+  if(!ok){ syncCode=null; return {ok:false, msg:'Could not reach the server — try again'}; }
+  return {ok:true};
+}
+
+async function proceedToApp(username){
+  // Kick off the device-username save without blocking — it doesn't need
+  // to finish before the rest of the app loads.
+  const localSetPromise = localSet('device_username', username);
+  // Record when this account was last opened (stored in UTC by Postgres;
+  // convert to IST when reading it back, e.g. `last_login_at AT TIME ZONE
+  // 'Asia/Kolkata'`). Fire-and-forget — shouldn't block the app loading.
+  userFieldSet('last_login_at', new Date().toISOString());
+  habits = await loadHabits();
+  lockSecretHabits();
+  renderManageList();
+  await loadMonth();
+  await localSetPromise;
+  document.getElementById('todayBtn').click();
+  document.getElementById('loadingOverlay').style.display='none';
+  document.getElementById('app').style.display='block';
+  requestAnimationFrame(()=> document.getElementById('app').classList.add('app-visible'));
+  updateLastSynced();
+}
+
+function setGateMode(mode){
+  gateMode = mode;
+  const friendInput = document.getElementById('syncFriendInput');
+  const confirmInput = document.getElementById('syncPassConfirmInput');
+  const btn = document.getElementById('syncGateBtn');
+  const title = document.getElementById('syncGateTitle');
+  const hint = document.getElementById('syncGateHint');
+  const passInput = document.getElementById('syncPassInput');
+  document.getElementById('syncGateStatus').textContent = '';
+  if(mode==='signup'){
+    friendInput.style.display='block';
+    confirmInput.style.display='block';
+    passInput.placeholder = 'Password';
+    confirmInput.placeholder = 'Confirm password';
+    btn.textContent = 'Create account';
+    title.textContent = 'Create account';
+    hint.textContent = "Pick a username and password, plus a friend's name — that's used to recover your password later.";
+  } else if(mode==='reset'){
+    friendInput.style.display='block';
+    confirmInput.style.display='block';
+    passInput.placeholder = 'New password';
+    confirmInput.placeholder = 'Confirm new password';
+    btn.textContent = 'Reset password';
+    title.textContent = 'Reset password';
+    hint.textContent = "Enter the friend's name you set when you signed up, plus a new password.";
+  } else {
+    friendInput.style.display='none';
+    friendInput.value='';
+    confirmInput.style.display='none';
+    confirmInput.value='';
+    passInput.placeholder = 'Password';
+    btn.textContent = 'Log in';
+    title.textContent = 'Log in';
+    hint.textContent = 'Use the same username and password on every device to load the same habit history.';
+  }
+}
+
+/* Landing screen — pick Log in / Create account / Forgot password, then
+   the form panel swaps in with just the fields that mode needs. */
+function showGateLanding(){
+  document.getElementById('syncUserInput').value = '';
+  document.getElementById('syncPassInput').value = '';
+  document.getElementById('syncPassConfirmInput').value = '';
+  document.getElementById('syncFriendInput').value = '';
+  document.getElementById('syncGateStatus').textContent = '';
+  document.getElementById('gateForm').style.display = 'none';
+  document.getElementById('gateLanding').style.display = 'flex';
+}
+function showGateForm(mode){
+  setGateMode(mode);
+  document.getElementById('gateLanding').style.display = 'none';
+  document.getElementById('gateForm').style.display = 'flex';
+  document.getElementById('syncUserInput').focus();
+}
+document.getElementById('landingLoginBtn').addEventListener('click', ()=> showGateForm('login'));
+document.getElementById('landingSignupBtn').addEventListener('click', ()=> showGateForm('signup'));
+document.getElementById('landingForgotBtn').addEventListener('click', ()=> showGateForm('reset'));
+document.getElementById('gateBackBtn').addEventListener('click', showGateLanding);
+
+async function attemptGateSubmit(){
+  const uname = document.getElementById('syncUserInput').value;
+  const pw = document.getElementById('syncPassInput').value;
+  const confirm = document.getElementById('syncPassConfirmInput').value;
+  const friend = document.getElementById('syncFriendInput').value;
+  const statusEl = document.getElementById('syncGateStatus');
+  if(!uname.trim() || !pw){ statusEl.textContent = 'Enter a username and password'; return; }
+  let res, successMsg;
+  if(gateMode==='signup'){
+    statusEl.textContent = 'Creating your account…';
+    res = await doSignup(uname, pw, confirm, friend);
+    successMsg = 'Account created — opening your dashboard…';
+  } else if(gateMode==='reset'){
+    statusEl.textContent = 'Resetting your password…';
+    res = await doForgotPassword(uname, friend, pw, confirm);
+    successMsg = 'Password reset — opening your dashboard…';
+  } else {
+    statusEl.textContent = 'Checking your details…';
+    res = await doLogin(uname, pw);
+    successMsg = 'Login successful — opening your dashboard…';
+  }
+  if(!res.ok){ statusEl.textContent = res.msg; return; }
+  statusEl.classList.add('ok');
+  statusEl.textContent = successMsg;
+  document.getElementById('syncPassInput').value = '';
+  document.getElementById('syncPassConfirmInput').value = '';
+  document.getElementById('syncFriendInput').value = '';
+  await proceedToApp(uname.trim().toLowerCase());
+  statusEl.classList.remove('ok');
+  statusEl.textContent = '';
+}
+document.getElementById('syncGateBtn').addEventListener('click', attemptGateSubmit);
+document.getElementById('syncUserInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+document.getElementById('syncFriendInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+document.getElementById('syncPassInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && gateMode==='login') attemptGateSubmit(); });
+document.getElementById('syncPassConfirmInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptGateSubmit(); });
+
+function doLogout(){
+  syncCode = null;
+  localRemove('device_username');
+  document.getElementById('app').style.display='none';
+  document.getElementById('loadingOverlay').style.display='flex';
+  document.getElementById('loadingText').style.display='none';
+  setGateMode('login');
+  showGateLanding();
+  document.getElementById('syncGate').style.display='flex';
+}
+/* "Switch account" masthead button removed; logout is still available via
+   profile menu → "🚪 Log out" (see modalLogoutBtn), which also calls doLogout(). */
+
+
+/* ============ Profile modal: change password (account + secret) ============ */
+function showProfilePanel(panelId){
+  ['profileMenuPanel','changeAccountPanel','changeSecretPanel'].forEach(id=>{
+    document.getElementById(id).style.display = (id===panelId) ? 'block' : 'none';
+  });
+}
+function resetChangeAccountForm(){
+  document.getElementById('caOldPassInput').value = '';
+  document.getElementById('caFriendInput').value = '';
+  document.getElementById('caOldPassInput').disabled = false;
+  document.getElementById('caFriendInput').disabled = false;
+  document.getElementById('caNewPassInput').value = '';
+  document.getElementById('caNewPassConfirmInput').value = '';
+  document.getElementById('caStatus').textContent = '';
+  document.getElementById('caStatus').classList.remove('ok');
+}
+function resetChangeSecretForm(){
+  document.getElementById('csOldPassInput').value = '';
+  document.getElementById('csNewPassInput').value = '';
+  document.getElementById('csNewPassConfirmInput').value = '';
+  document.getElementById('csStatus').textContent = '';
+  document.getElementById('csStatus').classList.remove('ok');
+}
+document.getElementById('profileBtn').addEventListener('click', ()=>{
+  showProfilePanel('profileMenuPanel');
+  document.getElementById('profileModal').style.display = 'flex';
+});
+document.getElementById('profileModalClose').addEventListener('click', ()=>{
+  document.getElementById('profileModal').style.display = 'none';
+});
+document.getElementById('profileModal').addEventListener('click', (e)=>{
+  if(e.target.id==='profileModal') document.getElementById('profileModal').style.display = 'none';
+});
+document.getElementById('modalLogoutBtn').addEventListener('click', ()=>{
+  document.getElementById('profileModal').style.display = 'none';
+  doLogout();
+});
+
+document.getElementById('openChangeAccountBtn').addEventListener('click', ()=>{
+  resetChangeAccountForm();
+  showProfilePanel('changeAccountPanel');
+  document.getElementById('caOldPassInput').focus();
+});
+document.getElementById('caBackBtn').addEventListener('click', ()=> showProfilePanel('profileMenuPanel'));
+function syncCaExclusiveFields(){
+  const oldEl = document.getElementById('caOldPassInput');
+  const friendEl = document.getElementById('caFriendInput');
+  const oldFilled = oldEl.value.trim().length>0;
+  const friendFilled = friendEl.value.trim().length>0;
+  friendEl.disabled = oldFilled;
+  oldEl.disabled = friendFilled;
+}
+document.getElementById('caOldPassInput').addEventListener('input', syncCaExclusiveFields);
+document.getElementById('caFriendInput').addEventListener('input', syncCaExclusiveFields);
+async function doChangeAccountPassword(oldPassword, friendName, newPassword, confirmPassword){
+  oldPassword = (oldPassword||'').trim();
+  friendName = (friendName||'').trim();
+  const oldFilled = oldPassword.length>0;
+  const friendFilled = friendName.length>0;
+  if(!oldFilled && !friendFilled) return {ok:false, msg:'Enter your current password or your friend\u2019s name'};
+  if(oldFilled && friendFilled) return {ok:false, msg:'Enter only one: current password OR friend\u2019s name — not both'};
+  if(newPassword.length<4) return {ok:false, msg:'New password must be at least 4 characters'};
+  if(newPassword!==confirmPassword) return {ok:false, msg:"New passwords don't match"};
+  const existingHash = await storageGet('__password_hash');
+  if(existingHash===null) return {ok:false, msg:'No account password found'};
+  let verified = false, failMsg = 'Incorrect current password';
+  if(friendFilled){
+    const existingFriendHash = await storageGet('__friend_name_hash');
+    const friendHash = await hashPassword(friendName.toLowerCase());
+    verified = existingFriendHash!==null && existingFriendHash===friendHash;
+    failMsg = "That friend's name doesn't match our records";
+  } else {
+    const hash = await hashPassword(oldPassword);
+    verified = hash===existingHash;
+  }
+  if(!verified) return {ok:false, msg:failMsg};
+  const newHash = await hashPassword(newPassword);
+  const ok = await storageSet('__password_hash', newHash);
+  if(!ok) return {ok:false, msg:'Could not reach the server — try again'};
+  return {ok:true};
+}
+document.getElementById('caSubmitBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('caStatus');
+  statusEl.classList.remove('ok');
+  statusEl.textContent = 'Checking…';
+  const res = await doChangeAccountPassword(
+    document.getElementById('caOldPassInput').value,
+    document.getElementById('caFriendInput').value,
+    document.getElementById('caNewPassInput').value,
+    document.getElementById('caNewPassConfirmInput').value
+  );
+  if(!res.ok){ statusEl.textContent = res.msg; return; }
+  statusEl.classList.add('ok');
+  statusEl.textContent = 'Password changed ✓';
+  setTimeout(()=>{ showProfilePanel('profileMenuPanel'); }, 1200);
+});
+
+document.getElementById('openChangeSecretBtn').addEventListener('click', async ()=>{
+  resetChangeSecretForm();
+  showProfilePanel('changeSecretPanel');
+  const existing = await storageGet('__secret_password_hash');
+  const hasSecretPw = existing !== null;
+  document.getElementById('csHint').textContent = hasSecretPw
+    ? 'Enter your current secret-habits password, then set a new one.'
+    : "You haven't set a secret-habits password yet — set one first from the 🔒 Secret Habits button in My Habits.";
+  document.getElementById('csOldPassInput').style.display = hasSecretPw ? 'block' : 'none';
+  document.getElementById('csNewPassInput').style.display = hasSecretPw ? 'block' : 'none';
+  document.getElementById('csNewPassConfirmInput').style.display = hasSecretPw ? 'block' : 'none';
+  document.getElementById('csSubmitBtn').style.display = hasSecretPw ? 'block' : 'none';
+  if(hasSecretPw) document.getElementById('csOldPassInput').focus();
+});
+document.getElementById('csBackBtn').addEventListener('click', ()=> showProfilePanel('profileMenuPanel'));
+async function doChangeSecretPassword(oldPassword, newPassword, confirmPassword){
+  if(!oldPassword) return {ok:false, msg:'Enter your current secret-habits password'};
+  if(newPassword.length<4) return {ok:false, msg:'New password must be at least 4 characters'};
+  if(newPassword!==confirmPassword) return {ok:false, msg:"New passwords don't match"};
+  const existingHash = await storageGet('__secret_password_hash');
+  if(existingHash===null) return {ok:false, msg:'No secret-habits password set yet'};
+  const hash = await hashPassword(oldPassword);
+  if(hash!==existingHash) return {ok:false, msg:'Incorrect current password'};
+  const newHash = await hashPassword(newPassword);
+  const ok = await storageSet('__secret_password_hash', newHash);
+  if(!ok) return {ok:false, msg:'Could not reach the server — try again'};
+  return {ok:true};
+}
+document.getElementById('csSubmitBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('csStatus');
+  statusEl.classList.remove('ok');
+  statusEl.textContent = 'Checking…';
+  const res = await doChangeSecretPassword(
+    document.getElementById('csOldPassInput').value,
+    document.getElementById('csNewPassInput').value,
+    document.getElementById('csNewPassConfirmInput').value
+  );
+  if(!res.ok){ statusEl.textContent = res.msg; return; }
+  lockSecretHabits();
+  statusEl.classList.add('ok');
+  statusEl.textContent = 'Password changed ✓';
+  setTimeout(()=>{ showProfilePanel('profileMenuPanel'); }, 1200);
+});
+
+/* ============ Init ============ */
+(async function init(){
+  const cachedUser = await localGet('device_username');
+  if(cachedUser){
+    // Already logged in on this device — skip the gate and load straight
+    // into the app. Only falls back to the login screen if that somehow
+    // fails (e.g. the account no longer exists).
+    document.getElementById('loadingText').textContent = 'Welcome back — loading your data…';
+    document.getElementById('loadingText').style.display='block';
+    syncCode = cachedUser;
+    try{
+      await proceedToApp(cachedUser);
+      return;
+    }catch(e){
+      console.error(e);
+      syncCode = null;
+    }
+  }
+  document.getElementById('loadingText').style.display='none';
+  setGateMode('login');
+  document.getElementById('syncGate').style.display='flex';
+  if(cachedUser){
+    // We know this device's username already — skip straight to the login
+    // form, pre-filled, instead of making them pick from the landing menu.
+    showGateForm('login');
+    document.getElementById('syncUserInput').value = cachedUser;
+    document.getElementById('syncPassInput').focus();
+  } else {
+    showGateLanding();
+  }
+})();
+</script>
+</body>
+</html>
