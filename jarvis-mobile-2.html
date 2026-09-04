@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JARVIS</title>
+<style>
+  :root{
+    --void: #05080d;
+    --panel: #0b121c;
+    --line: #16344a;
+    --cyan: #4fd8e8;
+    --cyan-dim: #1f5a68;
+    --amber: #ffb454;
+    --text: #cfe8ee;
+    --text-dim: #6f93a0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow-x:hidden;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 50% 0%, rgba(79,216,232,0.08), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(79,216,232,0.025) 0px, rgba(79,216,232,0.025) 1px, transparent 1px, transparent 3px);
+  }
+  .frame{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 18px 28px;
+  }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  header .mark{
+    font-size: 22px; letter-spacing: 4px; font-weight: bold; color: var(--cyan);
+    text-shadow: 0 0 12px rgba(79,216,232,0.5);
+  }
+  header .stat{
+    font-size: 11px; color: var(--text-dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%; background: var(--text-dim);}
+  .dot.live{ background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .core-wrap{
+    display:flex; flex-direction:column; align-items:center;
+    padding: 18px 0 8px;
+  }
+  .core{
+    position:relative;
+    width: 190px; height:190px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    background: radial-gradient(circle at 50% 40%, rgba(79,216,232,0.12), transparent 70%);
+    border: 1px solid var(--line);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .core::before, .core::after{
+    content:""; position:absolute; border-radius:50%; border:1px solid var(--line);
+  }
+  .core::before{ width: 150%; height:150%; }
+  .core::after{ width: 122%; height:122%; }
+  .core .ring{
+    position:absolute; inset:0; border-radius:50%;
+    border: 2px solid var(--cyan-dim);
+  }
+  .core .inner{
+    width: 108px; height:108px; border-radius:50%;
+    background: linear-gradient(180deg, #0e2430, #071018);
+    border: 1px solid var(--cyan-dim);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 12px; letter-spacing:2px; color: var(--text-dim);
+  }
+  .core.listening{ box-shadow: 0 0 40px rgba(79,216,232,0.25); }
+  .core.listening .ring{
+    border-color: var(--cyan);
+    animation: spin 3s linear infinite;
+    box-shadow: 0 0 18px rgba(79,216,232,0.6);
+  }
+  .core.listening .inner{ color: var(--cyan); border-color: var(--cyan); }
+  .core.speaking .inner{ color: var(--amber); border-color: var(--amber); }
+  .core.speaking .ring{ border-color: var(--amber); box-shadow: 0 0 18px rgba(255,180,84,0.5); }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .bars{
+    display:flex; align-items:flex-end; gap:3px; height: 22px; margin-top: 16px;
+  }
+  .bars span{
+    width:3px; background: var(--cyan-dim); border-radius:1px; height:4px;
+    transition: height .12s ease, background .12s ease;
+  }
+  .bars.active span{ background: var(--cyan); }
+
+  .hint{ margin-top: 14px; font-size: 12px; color: var(--text-dim); text-align:center; min-height: 16px;}
+
+  .log{
+    flex:1;
+    margin-top: 20px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    display:flex; flex-direction:column; gap: 10px;
+    overflow-y:auto;
+  }
+  .line{ font-size: 13px; line-height:1.5; }
+  .line .who{ color: var(--text-dim); font-size: 10px; letter-spacing:2px; display:block; margin-bottom:2px;}
+  .line.user .who{ color: var(--amber); }
+  .line.jarvis .who{ color: var(--cyan); }
+  .line.user{ padding-left: 14px; border-left: 2px solid rgba(255,180,84,0.4); }
+  .line.jarvis{ padding-left: 14px; border-left: 2px solid rgba(79,216,232,0.4); }
+
+  .typebar{
+    display:flex; gap:8px; margin-top: 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+  .typebar input{
+    flex:1; background: var(--panel); border:1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 4px; font-family: inherit; font-size: 13px;
+  }
+  .typebar input:focus{ outline: none; border-color: var(--cyan); }
+  .typebar button{
+    background: var(--panel); border:1px solid var(--cyan-dim); color: var(--cyan);
+    padding: 0 16px; border-radius: 4px; font-family: inherit; font-size: 13px; cursor:pointer;
+  }
+  .typebar button:active{ background: rgba(79,216,232,0.15); }
+
+  .commands{
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .commands summary{ cursor:pointer; color: var(--cyan-dim); letter-spacing:1px; }
+  .commands ul{ margin: 8px 0 0; padding-left: 16px; }
+
+  ::-webkit-scrollbar{ width:4px; }
+  ::-webkit-scrollbar-thumb{ background: var(--line); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background: rgba(2,5,8,0.82);
+    display:flex; align-items:center; justify-content:center;
+    padding: 24px; z-index: 100;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-panel{
+    width:100%; max-width: 420px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 20px; max-height: 85vh; overflow-y:auto;
+  }
+  .modal-panel h2{
+    margin:0 0 16px; font-size:14px; letter-spacing:2px; color: var(--cyan);
+    text-shadow: 0 0 10px rgba(79,216,232,0.4);
+  }
+  .modal-field{ margin-bottom: 16px; }
+  .modal-field label{
+    display:block; font-size:11px; letter-spacing:1px; color: var(--text-dim); margin-bottom:6px;
+  }
+  .modal-field input, .modal-field select{
+    width:100%; background: var(--void); border:1px solid var(--line); color: var(--text);
+    padding: 9px 10px; border-radius: 4px; font-family: inherit; font-size: 13px;
+  }
+  .modal-field input:focus, .modal-field select:focus{ outline:none; border-color: var(--cyan); }
+  .modal-hint{ font-size: 11px; color: var(--text-dim); margin-top:6px; line-height:1.5; }
+  .modal-row{ display:flex; gap:10px; margin-top: 18px; }
+  .modal-row button{
+    flex:1; font-family: inherit; font-size: 13px; padding: 10px; border-radius: 4px; cursor:pointer;
+  }
+  .btn-primary{ background: rgba(79,216,232,0.12); border:1px solid var(--cyan-dim); color: var(--cyan); }
+  .btn-secondary{ background: none; border:1px solid var(--line); color: var(--text-dim); }
+  .btn-primary:active, .btn-secondary:active{ background: rgba(79,216,232,0.2); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <header>
+    <div class="mark">JARVIS</div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="stat"><span class="dot" id="statusDot"></span><span id="statusText">standby</span></div>
+      <button id="settingsBtn" title="Settings" style="background:none; border:1px solid var(--line); color:var(--text-dim); width:26px; height:26px; border-radius:4px; font-family:inherit; font-size:13px; cursor:pointer; line-height:1;">&#9881;</button>
+    </div>
+  </header>
+
+  <div class="modal-overlay hidden" id="settingsOverlay">
+    <div class="modal-panel">
+      <h2>JARVIS SETTINGS</h2>
+
+      <div class="modal-field">
+        <label for="voiceSelect">VOICE</label>
+        <select id="voiceSelect"></select>
+        <div class="modal-hint">Voices come from your device/browser. Chrome on Android usually offers the best selection &mdash; try a few and tap Test.</div>
+        <div class="modal-row">
+          <button class="btn-secondary" id="testVoiceBtn" type="button">Test Voice</button>
+        </div>
+      </div>
+
+      <div class="modal-field">
+        <label for="apiKeyInput">ANTHROPIC API KEY</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+        <div class="modal-hint">Get one at console.anthropic.com &rarr; API Keys. Stored only in this browser.</div>
+      </div>
+
+      <div class="modal-row">
+        <button class="btn-secondary" id="settingsCancelBtn" type="button">Close</button>
+        <button class="btn-primary" id="settingsSaveBtn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="core-wrap">
+    <div class="core" id="core">
+      <div class="ring"></div>
+      <div class="inner" id="coreLabel">TAP TO<br>SPEAK</div>
+    </div>
+    <div class="bars" id="bars">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="hint" id="hint">Tap the core, or type anything below.</div>
+  </div>
+
+  <div class="log" id="log">
+    <div class="line jarvis">
+      <span class="who">JARVIS</span>
+      Systems online. Ask me anything, or tap the core and speak.
+    </div>
+  </div>
+
+  <div class="typebar">
+    <input type="text" id="typeInput" placeholder="Ask me anything..." autocomplete="off">
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <details class="commands">
+    <summary>available commands</summary>
+    <ul>
+      <li>ask anything &mdash; questions, advice, explanations, code, writing help, conversation... it's all handled by the reasoning core, just like ChatGPT or Gemini</li>
+      <li>what time is it / what's the date</li>
+      <li>search google for &lt;topic&gt;</li>
+      <li>search youtube for &lt;topic&gt; / play &lt;song&gt; on youtube</li>
+      <li>wikipedia &lt;topic&gt;</li>
+      <li>open &lt;website&gt;.com</li>
+      <li>what's the weather in &lt;city&gt;</li>
+      <li>what is my ip address</li>
+      <li>calculate &lt;expression&gt;</li>
+      <li>flip a coin / roll a dice</li>
+      <li>tell me a joke</li>
+      <li>who are you</li>
+      <li>stop listening / exit</li>
+    </ul>
+  </details>
+
+</div>
+
+<script>
+const core = document.getElementById('core');
+const coreLabel = document.getElementById('coreLabel');
+const hint = document.getElementById('hint');
+const log = document.getElementById('log');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const bars = document.getElementById('bars');
+const typeInput = document.getElementById('typeInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let listening = false;
+let recognition = null;
+let synthVoice = null;
+let conversationHistory = [];
+let aiBusy = false;
+
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsOverlay = document.getElementById('settingsOverlay');
+const voiceSelect = document.getElementById('voiceSelect');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const testVoiceBtn = document.getElementById('testVoiceBtn');
+const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+
+const API_KEY_STORAGE = 'jarvis_anthropic_api_key';
+const VOICE_STORAGE = 'jarvis_voice_name';
+
+function getApiKey(){
+  return localStorage.getItem(API_KEY_STORAGE) || '';
+}
+
+function openSettings(){
+  apiKeyInput.value = getApiKey();
+  populateVoiceOptions();
+  settingsOverlay.classList.remove('hidden');
+}
+function closeSettings(){
+  settingsOverlay.classList.add('hidden');
+}
+
+settingsBtn.addEventListener('click', openSettings);
+settingsCancelBtn.addEventListener('click', closeSettings);
+settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeSettings(); });
+
+settingsSaveBtn.addEventListener('click', () => {
+  const key = apiKeyInput.value.trim();
+  if (key) localStorage.setItem(API_KEY_STORAGE, key);
+  else localStorage.removeItem(API_KEY_STORAGE);
+
+  const chosenName = voiceSelect.value;
+  if (chosenName) localStorage.setItem(VOICE_STORAGE, chosenName);
+  applySavedVoice();
+
+  closeSettings();
+  hint.textContent = key ? 'Settings saved. JARVIS is ready.' : 'Settings saved.';
+});
+
+testVoiceBtn.addEventListener('click', () => {
+  const voices = speechSynthesis.getVoices();
+  const picked = voices.find(v => v.name === voiceSelect.value);
+  if (!picked) return;
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance("Good day. I'm JARVIS, and this is how I'll sound.");
+  utter.voice = picked;
+  utter.rate = 1.02;
+  speechSynthesis.speak(utter);
+});
+
+const JARVIS_SYSTEM_PROMPT = "You are JARVIS, a witty, unfailingly polite voice assistant in the style of Iron Man's AI. " +
+  "You can answer absolutely any question the user asks \u2014 general knowledge, explanations, advice, writing, coding help, " +
+  "math, brainstorming, casual conversation, anything \u2014 the same way a full AI assistant like ChatGPT or Gemini would. " +
+  "Since your replies are read aloud by text-to-speech, keep them conversational and reasonably brief: usually 1-4 sentences, " +
+  "longer only when the question genuinely requires more detail. Never use markdown, bullet points, headers, or asterisks. " +
+  "Refer to the user directly, stay in character as JARVIS, and be helpful, sharp, and a little dry-witted.";
+
+// ---- Speech synthesis setup ----
+// Voices, and their quality, are entirely up to the device/browser. We rank the
+// available voices so the nicest-sounding one is picked by default, but the user
+// can always override via the settings panel (gear icon) and preview with Test Voice.
+function scoreVoice(v){
+  let score = 0;
+  const name = v.name.toLowerCase();
+  // Premium/neural engines sound far more natural than robotic default voices.
+  if (/natural|neural|premium|enhanced|wavenet/.test(name)) score += 50;
+  // A well-regarded default on Android Chrome.
+  if (/google uk english male/.test(name)) score += 30;
+  if (/google uk english female/.test(name)) score += 25;
+  if (/google us english/.test(name)) score += 15;
+  if (/^google/.test(name)) score += 10;
+  if (/male/.test(name)) score += 3;
+  if (/^microsoft/.test(name)) score += 8;
+  if (/en-gb/i.test(v.lang)) score += 6;
+  else if (/en-us/i.test(v.lang)) score += 4;
+  else if (/^en/i.test(v.lang)) score += 2;
+  if (v.localService) score += 1;
+  return score;
+}
+
+function bestAvailableVoice(){
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  const english = voices.filter(v => /^en/i.test(v.lang));
+  const pool = english.length ? english : voices;
+  return pool.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || voices[0];
+}
+
+function applySavedVoice(){
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const savedName = localStorage.getItem(VOICE_STORAGE);
+  const saved = savedName && voices.find(v => v.name === savedName);
+  synthVoice = saved || bestAvailableVoice();
+}
+
+function populateVoiceOptions(){
+  const voices = speechSynthesis.getVoices();
+  voiceSelect.innerHTML = '';
+  const englishFirst = voices.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a));
+  const currentName = (synthVoice && synthVoice.name) || (englishFirst[0] && englishFirst[0].name);
+  englishFirst.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = v.name + ' (' + v.lang + ')';
+    if (v.name === currentName) opt.selected = true;
+    voiceSelect.appendChild(opt);
+  });
+}
+
+function pickVoice(){
+  applySavedVoice();
+  if (!settingsOverlay.classList.contains('hidden')) populateVoiceOptions();
+}
+if ('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = pickVoice;
+  pickVoice();
+}
+
+if (!getApiKey()){
+  hint.textContent = 'Tap the gear icon above to add your Anthropic API key.';
+}
+
+function addLine(who, text){
+  const div = document.createElement('div');
+  div.className = 'line ' + (who === 'JARVIS' ? 'jarvis' : 'user');
+  div.innerHTML = '<span class="who">' + who + '</span>' + text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function speak(text){
+  addLine('JARVIS', text);
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  if (synthVoice) utter.voice = synthVoice;
+  utter.rate = 1.02;
+  utter.onstart = () => setCoreState('speaking');
+  utter.onend = () => setCoreState('idle');
+  speechSynthesis.speak(utter);
+}
+
+function setCoreState(state){
+  core.classList.remove('listening','speaking');
+  bars.classList.remove('active');
+  if (state === 'listening'){
+    core.classList.add('listening');
+    coreLabel.innerHTML = 'LISTEN<br>ING';
+    statusDot.classList.add('live');
+    statusText.textContent = 'listening';
+    bars.classList.add('active');
+    animateBars();
+  } else if (state === 'speaking'){
+    core.classList.add('speaking');
+    coreLabel.innerHTML = 'SPEAK<br>ING';
+    statusDot.classList.remove('live');
+    statusText.textContent = 'responding';
+  } else if (state === 'thinking'){
+    core.classList.add('speaking');
+    coreLabel.innerHTML = 'THINK<br>ING';
+    statusDot.classList.remove('live');
+    statusText.textContent = 'thinking';
+  } else {
+    coreLabel.innerHTML = 'TAP TO<br>SPEAK';
+    statusDot.classList.remove('live');
+    statusText.textContent = 'standby';
+    bars.querySelectorAll('span').forEach(s => s.style.height = '4px');
+  }
+}
+
+function animateBars(){
+  if (!core.classList.contains('listening')) return;
+  bars.querySelectorAll('span').forEach(s => {
+    s.style.height = (4 + Math.random()*18) + 'px';
+  });
+  requestAnimationFrame(() => setTimeout(animateBars, 90));
+}
+
+// ---- Speech recognition setup ----
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition){
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    addLine('YOU', transcript);
+    processCommand(transcript);
+  };
+  recognition.onerror = (event) => {
+    setCoreState('idle');
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+      hint.textContent = 'Microphone access was blocked. Check your browser permissions.';
+    } else if (event.error === 'no-speech'){
+      hint.textContent = 'Didn\u2019t catch that. Tap the core to try again.';
+    } else {
+      hint.textContent = 'Recognition error: ' + event.error;
+    }
+    listening = false;
+  };
+  recognition.onend = () => {
+    listening = false;
+    if (!core.classList.contains('speaking')) setCoreState('idle');
+  };
+} else {
+  hint.textContent = 'Voice recognition isn\u2019t supported in this browser. Try Chrome on Android, or type commands below.';
+}
+
+core.addEventListener('click', () => {
+  if (!recognition){
+    hint.textContent = 'Voice recognition isn\u2019t supported here \u2014 type a command instead.';
+    return;
+  }
+  if (listening){
+    recognition.stop();
+    return;
+  }
+  try{
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    recognition.start();
+    listening = true;
+    setCoreState('listening');
+    hint.textContent = 'Listening...';
+  } catch(e){
+    hint.textContent = 'Could not start microphone.';
+  }
+});
+
+sendBtn.addEventListener('click', submitTyped);
+typeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTyped(); });
+function submitTyped(){
+  const val = typeInput.value.trim();
+  if (!val) return;
+  addLine('YOU', val);
+  typeInput.value = '';
+  processCommand(val);
+}
+
+// ---- Command processing ----
+const JOKES = [
+  "Why do programmers prefer dark mode? Because light attracts bugs.",
+  "I told my computer I needed a break, and it said no problem, it'll go to sleep too.",
+  "Why did the developer go broke? Because they used up all their cache."
+];
+
+async function processCommand(rawText){
+  hint.textContent = '';
+  if (!rawText || !rawText.trim()) return;
+  if (aiBusy) return;
+  const query = rawText.toLowerCase();
+
+  if (/(stop listening|goodbye|shut ?down jarvis|exit)/.test(query)){
+    speak("Goodbye. Standing by.");
+    return;
+  }
+
+  if (/\btime\b/.test(query)){
+    const now = new Date();
+    speak("It's " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+    return;
+  }
+
+  if (/\bdate\b/.test(query)){
+    const today = new Date();
+    speak("Today is " + today.toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'}));
+    return;
+  }
+
+  if (query.includes('search google for')){
+    const topic = query.split('search google for')[1].trim();
+    speak("Searching Google for " + topic);
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(topic), "_blank");
+    return;
+  }
+
+  if (query.includes('search youtube for') || (query.includes('play') && query.includes('on youtube'))){
+    let topic;
+    if (query.includes('play')){
+      topic = query.split('play')[1].split('on youtube')[0].trim();
+    } else {
+      topic = query.split('search youtube for')[1].trim();
+    }
+    speak("Opening YouTube for " + topic);
+    window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(topic), "_blank");
+    return;
+  }
+
+  if (query.includes('wikipedia')){
+    const topic = query.replace('wikipedia', '').trim();
+    if (!topic){ speak("What should I look up on Wikipedia?"); return; }
+    speak("Searching Wikipedia for " + topic);
+    try{
+      const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(topic));
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      speak(data.extract || "I couldn't find a clear result for that.");
+    } catch(e){
+      speak("I couldn't find a clear result for that on Wikipedia.");
+    }
+    return;
+  }
+
+  if (/weather/.test(query)){
+    const city = query.replace("what's the weather in","").replace("weather in","").replace("weather","").trim();
+    if (!city){ speak("Which city's weather would you like?"); return; }
+    speak("Checking the weather in " + city);
+    try{
+      const res = await fetch("https://wttr.in/" + encodeURIComponent(city) + "?format=3");
+      const text = await res.text();
+      speak(text.trim());
+    } catch(e){
+      speak("I couldn't reach the weather service. Check your connection.");
+    }
+    return;
+  }
+
+  if (query.includes('ip address')){
+    try{
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      speak("Your public IP address is " + data.ip);
+    } catch(e){
+      speak("I couldn't reach the IP lookup service.");
+    }
+    return;
+  }
+
+  if (query.includes('calculate')){
+    let expr = query.replace('calculate','').trim();
+    const wordsToSymbols = {'plus':'+','minus':'-','times':'*','multiplied by':'*','divided by':'/',' x ':'*'};
+    for (const [w,s] of Object.entries(wordsToSymbols)){
+      expr = expr.split(w).join(s);
+    }
+    if (/^[0-9+\-*/(). ]+$/.test(expr)){
+      try{
+        const result = Function('"use strict"; return (' + expr + ')')();
+        speak("That's " + result);
+      } catch(e){
+        speak("I couldn't calculate that.");
+      }
+    } else {
+      speak("I couldn't calculate that.");
+    }
+    return;
+  }
+
+  if (query.includes('flip a coin') || query.includes('coin flip')){
+    speak(Math.random() < 0.5 ? "Heads" : "Tails");
+    return;
+  }
+
+  if (query.includes('roll a dice') || query.includes('roll the dice') || query.includes('roll a die')){
+    speak("You rolled a " + (Math.floor(Math.random()*6)+1));
+    return;
+  }
+
+  if (/\.(com|org|net)\b/.test(query)){
+    const site = query.replace('open','').trim().replace(/\s+/g,'');
+    speak("Opening " + site);
+    window.open("https://" + site, "_blank");
+    return;
+  }
+
+  if (query.includes('joke')){
+    speak(JOKES[Math.floor(Math.random()*JOKES.length)]);
+    return;
+  }
+
+  if (query.includes('who are you') || query.includes('your name')){
+    speak("I'm Jarvis, your personal voice assistant.");
+    return;
+  }
+
+  if (/^(hii|hi|hello|hey jarvis|hey)\b/.test(query) || query.includes('hello') || query.includes('hey jarvis')){
+    speak("Hello! How can I help you?");
+    return;
+  }
+
+  if (query.includes('how are you')){
+    speak("I'm doing great, thanks for asking! How can I help you?");
+    return;
+  }
+
+  // Anything that isn't one of the quick local commands above goes to JARVIS's
+  // full reasoning core, so it can answer general questions like ChatGPT or Gemini.
+  askAI(rawText.trim());
+}
+
+async function askAI(userText){
+  const apiKey = getApiKey();
+  if (!apiKey){
+    speak("I don't have an API key set up yet. Tap the gear icon at the top to add your Anthropic API key, then ask me again.");
+    return;
+  }
+
+  aiBusy = true;
+  setCoreState('thinking');
+  hint.textContent = 'Thinking...';
+
+  conversationHistory.push({ role: 'user', content: userText });
+  if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-5",
+        max_tokens: 1000,
+        system: JARVIS_SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    if (!response.ok){
+      const errBody = await response.text().catch(() => '');
+      if (response.status === 401){
+        conversationHistory.pop();
+        aiBusy = false;
+        setCoreState('idle');
+        speak("That API key was rejected. Tap the gear icon to check or update it.");
+        return;
+      }
+      throw new Error('bad status ' + response.status + ' ' + errBody);
+    }
+
+    const data = await response.json();
+    let reply = '';
+    if (data && Array.isArray(data.content)){
+      reply = data.content.filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
+    }
+    if (!reply) reply = "I couldn't quite form an answer to that. Could you rephrase it?";
+
+    conversationHistory.push({ role: 'assistant', content: reply });
+    aiBusy = false;
+    speak(reply);
+  } catch(e){
+    conversationHistory.pop(); // don't keep a dangling unanswered user turn
+    aiBusy = false;
+    setCoreState('idle');
+    hint.textContent = '';
+    speak("I'm having trouble reaching my reasoning core. Check your connection and API key, then try again.");
+  }
+}
+</script>
+</body>
+</html>
