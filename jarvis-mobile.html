@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JARVIS</title>
+<style>
+  :root{
+    --void: #05080d;
+    --panel: #0b121c;
+    --line: #16344a;
+    --cyan: #4fd8e8;
+    --cyan-dim: #1f5a68;
+    --amber: #ffb454;
+    --text: #cfe8ee;
+    --text-dim: #6f93a0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow-x:hidden;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 50% 0%, rgba(79,216,232,0.08), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(79,216,232,0.025) 0px, rgba(79,216,232,0.025) 1px, transparent 1px, transparent 3px);
+  }
+  .frame{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 18px 28px;
+  }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  header .mark{
+    font-size: 22px; letter-spacing: 4px; font-weight: bold; color: var(--cyan);
+    text-shadow: 0 0 12px rgba(79,216,232,0.5);
+  }
+  header .stat{
+    font-size: 11px; color: var(--text-dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%; background: var(--text-dim);}
+  .dot.live{ background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .core-wrap{
+    display:flex; flex-direction:column; align-items:center;
+    padding: 18px 0 8px;
+  }
+  .core{
+    position:relative;
+    width: 190px; height:190px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    background: radial-gradient(circle at 50% 40%, rgba(79,216,232,0.12), transparent 70%);
+    border: 1px solid var(--line);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .core::before, .core::after{
+    content:""; position:absolute; border-radius:50%; border:1px solid var(--line);
+  }
+  .core::before{ width: 150%; height:150%; }
+  .core::after{ width: 122%; height:122%; }
+  .core .ring{
+    position:absolute; inset:0; border-radius:50%;
+    border: 2px solid var(--cyan-dim);
+  }
+  .core .inner{
+    width: 108px; height:108px; border-radius:50%;
+    background: linear-gradient(180deg, #0e2430, #071018);
+    border: 1px solid var(--cyan-dim);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 12px; letter-spacing:2px; color: var(--text-dim);
+  }
+  .core.listening{ box-shadow: 0 0 40px rgba(79,216,232,0.25); }
+  .core.listening .ring{
+    border-color: var(--cyan);
+    animation: spin 3s linear infinite;
+    box-shadow: 0 0 18px rgba(79,216,232,0.6);
+  }
+  .core.listening .inner{ color: var(--cyan); border-color: var(--cyan); }
+  .core.speaking .inner{ color: var(--amber); border-color: var(--amber); }
+  .core.speaking .ring{ border-color: var(--amber); box-shadow: 0 0 18px rgba(255,180,84,0.5); }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .bars{
+    display:flex; align-items:flex-end; gap:3px; height: 22px; margin-top: 16px;
+  }
+  .bars span{
+    width:3px; background: var(--cyan-dim); border-radius:1px; height:4px;
+    transition: height .12s ease, background .12s ease;
+  }
+  .bars.active span{ background: var(--cyan); }
+
+  .hint{ margin-top: 14px; font-size: 12px; color: var(--text-dim); text-align:center; min-height: 16px;}
+
+  .log{
+    flex:1;
+    margin-top: 20px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    display:flex; flex-direction:column; gap: 10px;
+    overflow-y:auto;
+  }
+  .line{ font-size: 13px; line-height:1.5; }
+  .line .who{ color: var(--text-dim); font-size: 10px; letter-spacing:2px; display:block; margin-bottom:2px;}
+  .line.user .who{ color: var(--amber); }
+  .line.jarvis .who{ color: var(--cyan); }
+  .line.user{ padding-left: 14px; border-left: 2px solid rgba(255,180,84,0.4); }
+  .line.jarvis{ padding-left: 14px; border-left: 2px solid rgba(79,216,232,0.4); }
+
+  .typebar{
+    display:flex; gap:8px; margin-top: 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+  .typebar input{
+    flex:1; background: var(--panel); border:1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 4px; font-family: inherit; font-size: 13px;
+  }
+  .typebar input:focus{ outline: none; border-color: var(--cyan); }
+  .typebar button{
+    background: var(--panel); border:1px solid var(--cyan-dim); color: var(--cyan);
+    padding: 0 16px; border-radius: 4px; font-family: inherit; font-size: 13px; cursor:pointer;
+  }
+  .typebar button:active{ background: rgba(79,216,232,0.15); }
+
+  .commands{
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .commands summary{ cursor:pointer; color: var(--cyan-dim); letter-spacing:1px; }
+  .commands ul{ margin: 8px 0 0; padding-left: 16px; }
+
+  ::-webkit-scrollbar{ width:4px; }
+  ::-webkit-scrollbar-thumb{ background: var(--line); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <header>
+    <div class="mark">JARVIS</div>
+    <div class="stat"><span class="dot" id="statusDot"></span><span id="statusText">standby</span></div>
+  </header>
+
+  <div class="core-wrap">
+    <div class="core" id="core">
+      <div class="ring"></div>
+      <div class="inner" id="coreLabel">TAP TO<br>SPEAK</div>
+    </div>
+    <div class="bars" id="bars">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="hint" id="hint">Tap the core, or type a command below.</div>
+  </div>
+
+  <div class="log" id="log">
+    <div class="line jarvis">
+      <span class="who">JARVIS</span>
+      Systems online. Tap the core and speak, or type a command below.
+    </div>
+  </div>
+
+  <div class="typebar">
+    <input type="text" id="typeInput" placeholder="Type a command..." autocomplete="off">
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <details class="commands">
+    <summary>available commands</summary>
+    <ul>
+      <li>what time is it / what's the date</li>
+      <li>search google for &lt;topic&gt;</li>
+      <li>search youtube for &lt;topic&gt; / play &lt;song&gt; on youtube</li>
+      <li>wikipedia &lt;topic&gt;</li>
+      <li>open &lt;website&gt;.com</li>
+      <li>what's the weather in &lt;city&gt;</li>
+      <li>what is my ip address</li>
+      <li>calculate &lt;expression&gt;</li>
+      <li>flip a coin / roll a dice</li>
+      <li>tell me a joke</li>
+      <li>who are you</li>
+      <li>stop listening / exit</li>
+    </ul>
+  </details>
+
+</div>
+
+<script>
+const core = document.getElementById('core');
+const coreLabel = document.getElementById('coreLabel');
+const hint = document.getElementById('hint');
+const log = document.getElementById('log');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const bars = document.getElementById('bars');
+const typeInput = document.getElementById('typeInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let listening = false;
+let recognition = null;
+let synthVoice = null;
+
+// ---- Speech synthesis setup ----
+function pickVoice(){
+  const voices = speechSynthesis.getVoices();
+  synthVoice = voices.find(v => /en-GB/i.test(v.lang) && /male/i.test(v.name))
+            || voices.find(v => /en-GB/i.test(v.lang))
+            || voices.find(v => /en/i.test(v.lang))
+            || voices[0] || null;
+}
+if ('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = pickVoice;
+  pickVoice();
+}
+
+function addLine(who, text){
+  const div = document.createElement('div');
+  div.className = 'line ' + (who === 'JARVIS' ? 'jarvis' : 'user');
+  div.innerHTML = '<span class="who">' + who + '</span>' + text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function speak(text){
+  addLine('JARVIS', text);
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  if (synthVoice) utter.voice = synthVoice;
+  utter.rate = 1.02;
+  utter.onstart = () => setCoreState('speaking');
+  utter.onend = () => setCoreState('idle');
+  speechSynthesis.speak(utter);
+}
+
+function setCoreState(state){
+  core.classList.remove('listening','speaking');
+  bars.classList.remove('active');
+  if (state === 'listening'){
+    core.classList.add('listening');
+    coreLabel.innerHTML = 'LISTEN<br>ING';
+    statusDot.classList.add('live');
+    statusText.textContent = 'listening';
+    bars.classList.add('active');
+    animateBars();
+  } else if (state === 'speaking'){
+    core.classList.add('speaking');
+    coreLabel.innerHTML = 'SPEAK<br>ING';
+    statusDot.classList.remove('live');
+    statusText.textContent = 'responding';
+  } else {
+    coreLabel.innerHTML = 'TAP TO<br>SPEAK';
+    statusDot.classList.remove('live');
+    statusText.textContent = 'standby';
+    bars.querySelectorAll('span').forEach(s => s.style.height = '4px');
+  }
+}
+
+function animateBars(){
+  if (!core.classList.contains('listening')) return;
+  bars.querySelectorAll('span').forEach(s => {
+    s.style.height = (4 + Math.random()*18) + 'px';
+  });
+  requestAnimationFrame(() => setTimeout(animateBars, 90));
+}
+
+// ---- Speech recognition setup ----
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition){
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    addLine('YOU', transcript);
+    processCommand(transcript.toLowerCase());
+  };
+  recognition.onerror = (event) => {
+    setCoreState('idle');
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+      hint.textContent = 'Microphone access was blocked. Check your browser permissions.';
+    } else if (event.error === 'no-speech'){
+      hint.textContent = 'Didn\u2019t catch that. Tap the core to try again.';
+    } else {
+      hint.textContent = 'Recognition error: ' + event.error;
+    }
+    listening = false;
+  };
+  recognition.onend = () => {
+    listening = false;
+    if (!core.classList.contains('speaking')) setCoreState('idle');
+  };
+} else {
+  hint.textContent = 'Voice recognition isn\u2019t supported in this browser. Try Chrome on Android, or type commands below.';
+}
+
+core.addEventListener('click', () => {
+  if (!recognition){
+    hint.textContent = 'Voice recognition isn\u2019t supported here \u2014 type a command instead.';
+    return;
+  }
+  if (listening){
+    recognition.stop();
+    return;
+  }
+  try{
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    recognition.start();
+    listening = true;
+    setCoreState('listening');
+    hint.textContent = 'Listening...';
+  } catch(e){
+    hint.textContent = 'Could not start microphone.';
+  }
+});
+
+sendBtn.addEventListener('click', submitTyped);
+typeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTyped(); });
+function submitTyped(){
+  const val = typeInput.value.trim();
+  if (!val) return;
+  addLine('YOU', val);
+  typeInput.value = '';
+  processCommand(val.toLowerCase());
+}
+
+// ---- Command processing ----
+const JOKES = [
+  "Why do programmers prefer dark mode? Because light attracts bugs.",
+  "I told my computer I needed a break, and it said no problem, it'll go to sleep too.",
+  "Why did the developer go broke? Because they used up all their cache."
+];
+
+async function processCommand(query){
+  hint.textContent = '';
+  if (!query) return;
+
+  if (/(stop listening|goodbye|shut ?down jarvis|exit)/.test(query)){
+    speak("Goodbye. Standing by.");
+    return;
+  }
+
+  if (/\btime\b/.test(query)){
+    const now = new Date();
+    speak("It's " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+    return;
+  }
+
+  if (/\bdate\b/.test(query)){
+    const today = new Date();
+    speak("Today is " + today.toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'}));
+    return;
+  }
+
+  if (query.includes('search google for')){
+    const topic = query.split('search google for')[1].trim();
+    speak("Searching Google for " + topic);
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(topic), "_blank");
+    return;
+  }
+
+  if (query.includes('search youtube for') || (query.includes('play') && query.includes('on youtube'))){
+    let topic;
+    if (query.includes('play')){
+      topic = query.split('play')[1].split('on youtube')[0].trim();
+    } else {
+      topic = query.split('search youtube for')[1].trim();
+    }
+    speak("Opening YouTube for " + topic);
+    window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(topic), "_blank");
+    return;
+  }
+
+  if (query.includes('wikipedia')){
+    const topic = query.replace('wikipedia', '').trim();
+    if (!topic){ speak("What should I look up on Wikipedia?"); return; }
+    speak("Searching Wikipedia for " + topic);
+    try{
+      const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(topic));
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      speak(data.extract || "I couldn't find a clear result for that.");
+    } catch(e){
+      speak("I couldn't find a clear result for that on Wikipedia.");
+    }
+    return;
+  }
+
+  if (/weather/.test(query)){
+    const city = query.replace("what's the weather in","").replace("weather in","").replace("weather","").trim();
+    if (!city){ speak("Which city's weather would you like?"); return; }
+    speak("Checking the weather in " + city);
+    try{
+      const res = await fetch("https://wttr.in/" + encodeURIComponent(city) + "?format=3");
+      const text = await res.text();
+      speak(text.trim());
+    } catch(e){
+      speak("I couldn't reach the weather service. Check your connection.");
+    }
+    return;
+  }
+
+  if (query.includes('ip address')){
+    try{
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      speak("Your public IP address is " + data.ip);
+    } catch(e){
+      speak("I couldn't reach the IP lookup service.");
+    }
+    return;
+  }
+
+  if (query.includes('calculate')){
+    let expr = query.replace('calculate','').trim();
+    const wordsToSymbols = {'plus':'+','minus':'-','times':'*','multiplied by':'*','divided by':'/',' x ':'*'};
+    for (const [w,s] of Object.entries(wordsToSymbols)){
+      expr = expr.split(w).join(s);
+    }
+    if (/^[0-9+\-*/(). ]+$/.test(expr)){
+      try{
+        const result = Function('"use strict"; return (' + expr + ')')();
+        speak("That's " + result);
+      } catch(e){
+        speak("I couldn't calculate that.");
+      }
+    } else {
+      speak("I couldn't calculate that.");
+    }
+    return;
+  }
+
+  if (query.includes('flip a coin') || query.includes('coin flip')){
+    speak(Math.random() < 0.5 ? "Heads" : "Tails");
+    return;
+  }
+
+  if (query.includes('roll a dice') || query.includes('roll the dice') || query.includes('roll a die')){
+    speak("You rolled a " + (Math.floor(Math.random()*6)+1));
+    return;
+  }
+
+  if (/\.(com|org|net)\b/.test(query)){
+    const site = query.replace('open','').trim().replace(/\s+/g,'');
+    speak("Opening " + site);
+    window.open("https://" + site, "_blank");
+    return;
+  }
+
+  if (query.includes('joke')){
+    speak(JOKES[Math.floor(Math.random()*JOKES.length)]);
+    return;
+  }
+
+  if (query.includes('who are you') || query.includes('your name')){
+    speak("I'm Jarvis, your personal voice assistant.");
+    return;
+  }
+
+  if (/^(hii|hi|hello|hey jarvis|hey)\b/.test(query) || query.includes('hello') || query.includes('hey jarvis')){
+    speak("Hello! How can I help you?");
+    return;
+  }
+
+  if (query.includes('how are you')){
+    speak("I'm doing great, thanks for asking! How can I help you?");
+    return;
+  }
+
+  speak("I don't know that command yet. Try: what time is it, search google for something, or tell me a joke.");
+}
+</script>
+</body>
+</html>
